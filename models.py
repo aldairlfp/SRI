@@ -5,6 +5,8 @@ from nltk import word_tokenize
 import string
 import numpy as np
 
+from data_collections import default_processor
+
 
 class VectorSpace(object):
     def __init__(self, docs):
@@ -44,36 +46,36 @@ class VectorSpace(object):
         return idf
 
     def _tfidf(self, doc):
-        tf_idf_scr = {}
+        tf_idf_scr = [{} for doc in self.docs]
         for i, doc in enumerate(self.docs):
             for word in doc.norm_corpus:
                 try:
                     tf = self._tf_dict[i][word]
                     idf = self._idf_dict[word]
-                    tf_idf_scr[word] = tf * idf
+                    tf_idf_scr[i][word] = tf * idf
                 except KeyError:
                     pass
         return tf_idf_scr
 
-    def make_query(self, query):
-        query_vocab = []
-        for word in query.split():
-            if word not in query_vocab:
-                query_vocab.append(word)
+    def ranking(self, query, top):
+        query = default_processor(query, 'english')
+        query = [word for word in query if word in self._idf_dict]
+        query_tfidf = {}
+        for word in query:
+            if word in query_tfidf:
+                query_tfidf[word] += 1
+            else:
+                query_tfidf[word] = 1
+        for word in query_tfidf:
+            query_tfidf[word] = query_tfidf[word] * self._idf_dict[word]
 
-        query_wc = {}
-        for word in query_vocab:
-            query_wc[word] = query.lower().split().count(word)
-
-        relevance_scores = {}
+        scores = [0 for doc in self.docs]
         for i, doc in enumerate(self.docs):
-            score = 0
-            for word in query_vocab:
-                try:
-                    score += query_wc[word] * self._tf_idf[i][word]
-                except KeyError:
-                    pass
-            relevance_scores[i] = score
-        sorted_value = OrderedDict(sorted(relevance_scores.items(), key=lambda x: x[1], reverse=True))
-        top_5 = {k: sorted_value[k] for k in list(sorted_value)[:5]}
-        return top_5
+            for word in query_tfidf:
+                if word in self._tf_idf[i]:
+                    scores[i] += self._tf_idf[i][word] * query_tfidf[word]
+
+        scores = np.array(scores)
+        scores = scores.argsort()[-top:][::-1]
+        return [self.docs[i] for i in scores]
+
