@@ -1,1 +1,7 @@
 # SRI
+
+## Integrantes
+
+- Aldair
+- Mauro
+- 
