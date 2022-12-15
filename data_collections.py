@@ -107,7 +107,6 @@ class NewsGroupCollection(Collection):
         super().__init__(processor, lang)
 
     def parse(self, file):
-        docs = []
         text = ''
         subject = ''
         d_id = 1
@@ -120,5 +119,4 @@ class NewsGroupCollection(Collection):
             if s and line.split()[0] == 'Subject:':
                 s = 0
                 subject = ' '.join(line.split()[1:])
-        docs.append([subject, text, d_id])
-        return docs
+        return [subject, text, d_id]
