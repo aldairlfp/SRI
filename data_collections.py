@@ -22,6 +22,11 @@ def default_processor(raw_text, language):
 class Collection:
 
     def __init__(self, processor, lang: str = 'english'):
+        """
+        Collection initializer
+        :param processor: Text processor to use in the collection
+        :param lang: Language of the collection
+        """
         self.processor = processor
         self.lang = lang
 
@@ -56,15 +61,9 @@ class CranCollection(Collection):
     def __init__(self, processor=default_processor, lang='english'):
         super().__init__(processor, lang)
 
-    def get_extension_list(self):
-        return ['all.1400']
-
-    def get_pretty_name(self) -> str:
-        return 'Cran'
-
     def parse(self, file):
         docs = []
-        doc_id = 0
+        id = 0
         text = ''
         subject = ''
         in_subject = 0
@@ -81,7 +80,7 @@ class CranCollection(Collection):
                     text += line
                 elif line.split()[0] == '.I':
                     if in_text:
-                        doc = Document(doc_id, subject, text, self.processor, self.lang)
+                        doc = Document(id, subject, text, self.processor, self.lang)
                         docs.append(doc)
                         in_text = 0
                         subject = ''
@@ -96,8 +95,30 @@ class CranCollection(Collection):
                 elif in_subject:
                     subject += line
             elif not line:
-                doc = Document(doc_id, subject, text, self.processor, self.lang)
+                doc = Document(id, subject, text, self.processor, self.lang)
                 docs.append(doc)
                 break
 
+        return docs
+
+
+class NewsGroupCollection(Collection):
+    def __init__(self, processor=default_processor, lang='english'):
+        super().__init__(processor, lang)
+
+    def parse(self, file):
+        docs = []
+        text = ''
+        subject = ''
+        d_id = 1
+        s = 1
+        while True:
+            line = file.readline()
+            if not line:
+                break
+            text += line
+            if s and line.split()[0] == 'Subject:':
+                s = 0
+                subject = ' '.join(line.split()[1:])
+        docs.append([subject, text, d_id])
         return docs
