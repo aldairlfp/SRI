@@ -3,6 +3,7 @@ from nltk import word_tokenize
 import string
 # stemming
 from nltk.stem import PorterStemmer
+import os
 
 from documents import Document
 
@@ -21,34 +22,34 @@ def default_processor(raw_text, language):
 
 class Collection:
 
-    def __init__(self, processor, lang: str = 'english'):
-        self.processor = processor
-        self.lang = lang
-
-    def get_pretty_name(self) -> str:
-        """Returns the pretty name of this parser
-
-        Returns:
-            str: The name of the parser
+    def __init__(self, corpus: str, processor=default_processor, lang: str = 'english'):
         """
-        return self.__class__.__name__
-
-    def get_extension_list(self) -> list[str]:
-        """Returns the list of the formats this parser handles
-        Returns:
-            list[str]: A list with all the formats. Each element has the form 'ext' not '.ext',
+        Collection initializer
+        :param processor: Text processor to use in the collection
+        :param lang: Language of the collection
         """
-        return ['.txt']
+        self._corpus = corpus
+        self._processor = processor
+        self._lang = lang
+        self._pre_docs = self.explore_dir('corpus/' + corpus, '')
 
-    def parse(self, file):
-        """This method receives a file and parse its contents returning a list of documents
+    def explore_dir(self, r, p):
+        docs = []
+        os.chdir(r)
+        elements = os.listdir()
+        for path in elements:
+            if os.path.isdir(path):
+                n_p = p + '/' + path
+                self.explore_dir(path, n_p)
+                os.chdir('..')
+            else:
+                file = open(path, 'r', errors='ignore')
+                docs.append(file)
+                file.close()
+        return docs
 
-        Args:
-            file (_type_): _description_
-        Returns:
-            list[Document]: A list with the normalized documents
-        """
-        return [Document(0, 'empty', 'empty', self.processor, self.lang)]
+    def parse(self):
+        raise NotImplemented()
 
 
 class CranCollection(Collection):
@@ -56,15 +57,9 @@ class CranCollection(Collection):
     def __init__(self, processor=default_processor, lang='english'):
         super().__init__(processor, lang)
 
-    def get_extension_list(self):
-        return ['all.1400']
-
-    def get_pretty_name(self) -> str:
-        return 'Cran'
-
     def parse(self, file):
         docs = []
-        doc_id = 0
+        id = 0
         text = ''
         subject = ''
         in_subject = 0
@@ -81,7 +76,7 @@ class CranCollection(Collection):
                     text += line
                 elif line.split()[0] == '.I':
                     if in_text:
-                        doc = Document(doc_id, subject, text, self.processor, self.lang)
+                        doc = Document(id, subject, text, self.processor, self.lang)
                         docs.append(doc)
                         in_text = 0
                         subject = ''
@@ -96,8 +91,27 @@ class CranCollection(Collection):
                 elif in_subject:
                     subject += line
             elif not line:
-                doc = Document(doc_id, subject, text, self.processor, self.lang)
+                doc = Document(id, subject, text, self.processor, self.lang)
                 docs.append(doc)
                 break
 
         return docs
+
+
+class NewsGroupCollection(Collection):
+    def __init__(self, processor=default_processor, lang='english'):
+        super().__init__(processor, lang)
+
+    def get_document(self, file):
+        text = ''
+        subject = ''
+        s = 1
+        while True:
+            line = file.readline()
+            if not line:
+                break
+            text += line
+            if s and line.split()[0] == 'Subject:':
+                s = 0
+                subject = ' '.join(line.split()[1:])
+        return [subject, text]
