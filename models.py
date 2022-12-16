@@ -2,7 +2,7 @@ from collections import Counter
 import numpy as np
 
 from documents import Document
-from parse import Expression
+from parse import BooleanExpression
 from data_collections import default_processor
 import utils
 
@@ -76,10 +76,11 @@ class BooleanExtended(object):
                     weight[i][word] = 0
         return weight
 
-    def ranking(self, r_query):
+    def ranking(self, r_query, top):
         """ 
         Method to rank the documents based on the query
         
+        :param top:
         :param self: instance of the model
         :type self: Extended
         
@@ -94,13 +95,12 @@ class BooleanExtended(object):
         query = r_query.split()
 
         # parse the query
-        expr = Expression('or')
+        expr = BooleanExpression('or')
         expr.parse(query)
 
         # evaluate the query
         rank = expr.eval(self)
 
-        # sort the documents based on the score
-        rank = sorted(rank)
-
-        return rank[:-1]
+        scores = np.array(rank)
+        scores = scores.argsort()[-top:][::-1]
+        return [self.docs[i] for i in scores]
