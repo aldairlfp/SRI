@@ -4,13 +4,11 @@ import numpy as np
 from documents import Document
 from parse import Expression
 
-
-
 from data_collections import default_processor
 
+
 class Query(object):
-    
-    
+
     def precedence(token):
         """ Precedence of supported operators """
         __precedence = {"&": 2, "|": 1}
@@ -18,23 +16,19 @@ class Query(object):
             return __precedence[token]
         except:
             return -1
-    
-    
+
     def is_left_bracket(token):
         """ Returns true if left bracket """
         return token == "("
-    
-    
+
     def is_right_bracket(token):
         """ Returns true if right bracket """
         return token == ")"
-    
-    
+
     def is_operator(token):
         """ Returns true if operator """
         return token == "&" or token == "|"
-    
-    
+
     def parse(self, query, processor: default_processor, lang: str = 'english'):
         """ Parse query into a list of tokens 
         :param self: self
@@ -53,20 +47,20 @@ class Query(object):
         :rtype : list, bool
         :return: processor, is_conjuntive
         """
-        
+
         if '&' not in query:
             return processor(query, lang), False
         if '|' not in query:
             return processor(query, lang), True
-            
+
         disjunctions = []
         current = 0
         index = 0
         rest = query
         is_conjuntive = False
-        
-        while(len(rest) > 0):
-            if rest[index] == '(': 
+
+        while (len(rest) > 0):
+            if rest[index] == '(':
                 disjunctions.append(processor(query[current:index], lang))
                 final = rest.findex(')')
                 index = final - 1
@@ -80,11 +74,11 @@ class Query(object):
                 is_conjuntive = True
             index += 1
             rest = rest[current:]
-            
+
         if len(rest) > 0:
             disjunctions.append(processor(query[current:], lang))
-            
-        return disjunctions, is_conjuntive        
+
+        return disjunctions, is_conjuntive
 
 
 class VectorSpace(object):
@@ -152,7 +146,7 @@ class VectorSpace(object):
                 query_tfidf[word] = 1
         for word in query_tfidf:
             query_tfidf[word] = (
-                self.a + (1 - self.a) * query_tfidf[word] / max_freq) * self._idf_dict[word]
+                                        self.a + (1 - self.a) * query_tfidf[word] / max_freq) * self._idf_dict[word]
 
         scores = [0 for doc in self.docs]
         for i, doc in enumerate(self.docs):
@@ -268,12 +262,14 @@ class Extended(object):
         weight = []
         for i, doc in enumerate(self.docs):
             weight.append([])
+            j = 0
             for word in doc.norm_corpus:
                 try:
-                    weight[i].append({word : self.normalize_frequence(
-                        self) * self._idf_dict[word] / max(self._idf_dict[word])})
+                    weight[i].append({word: self.normalize_frequence()[i] *
+                                            self._idf_dict[i][word] / max(self._idf_dict[i][word])})
                 except KeyError:
-                    weight[i].append({word : 0})
+                    weight[i].append({word: 0})
+                j += 1
         return weight
 
     def normalize_frequence(self):
@@ -297,7 +293,7 @@ class Extended(object):
                 except KeyError:
                     normalize_frequence[i].append(0)
         return normalize_frequence
-        
+
     def ranking(self, r_query):
         """ 
         Method to rank the documents based on the query
@@ -311,21 +307,18 @@ class Extended(object):
         :rtype: list
         :return: list of ranked documents
         """
-        
+
         # tokenize the query
         query = r_query.split()
-        
+
         # parse the query
         expr = Expression('or')
         expr.parse(query)
-        
+
         # evaluate the query
         rank = expr.evaluate(self)
-        
+
         # sort the documents based on the score
         rank = sorted(rank, key=lambda x: x[1], reverse=True)
-        
-        return rank[:10]
-        
-    
 
+        return rank[:10]
