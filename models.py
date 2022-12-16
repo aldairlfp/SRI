@@ -166,6 +166,7 @@ class Extended(object):
         self._idf_dict = self.inverse_doc_frequence()
         self._tf_idf = self.tf_idf(docs)
         self.vocabulary = self._idf_dict.keys()
+        self._norm_frec = self.normalize_frequence()
         self._weights = self.weight()
 
         """
@@ -261,15 +262,12 @@ class Extended(object):
 
         weight = []
         for i, doc in enumerate(self.docs):
-            weight.append([])
-            j = 0
-            for word in doc.norm_corpus:
+            weight.append({})
+            for j, word in enumerate(doc.norm_corpus):
                 try:
-                    weight[i].append({word: self.normalize_frequence()[i] *
-                                            self._idf_dict[i][word] / max(self._idf_dict[i][word])})
+                    weight[i][word] = self._norm_frec[i][j] * self._idf_dict[word] / max(self._idf_dict.values())
                 except KeyError:
-                    weight[i].append({word: 0})
-                j += 1
+                    weight[i][word] = 0
         return weight
 
     def normalize_frequence(self):
@@ -316,9 +314,9 @@ class Extended(object):
         expr.parse(query)
 
         # evaluate the query
-        rank = expr.evaluate(self)
+        rank = expr.eval(self)
 
         # sort the documents based on the score
-        rank = sorted(rank, key=lambda x: x[1], reverse=True)
+        rank = sorted(rank)
 
-        return rank[:10]
+        return rank[:-1]

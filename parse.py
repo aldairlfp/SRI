@@ -35,35 +35,50 @@ class Expression(object):
         return string
     
     def eval(self, model):
-        count = 0    
+        count = {}
+        for k in range(len(model._weights) + 1):
+            count[k] = 0
         result = []
         
         if self.type == 'and':
             for child in self.childrens:
-                for doc in model.weights:
-                    count += (1 - child.eval(model))**2
-                result.append(1 - count**0.5)
-                count = 0
+                temp = child.eval(model)
+                k = 0
+                for value in temp:
+                    count[k] = int(count[k]) + (1 - value)**2
+                    k += 1
+        
+            for k in count:
+                result.append(1 - (count[k]/len(self.childrens))**0.5)
+            
             return result
             
         for child in self.childrens:
-            for doc in model.weights:
-                count += child.eval(model)**2
-            result.append(count**0.5)
-            count = 0
+            temp = child.eval(model)
+            k = 0
+            for value in temp:
+                count[k] = int(count[k]) + value**2
+                k += 1
+        
+        for k in count:
+            result.append((count[k]/len(self.childrens))**0.5)
         return result
 
 class Token(object):
     def __init__(self, value):
         self.value = value
     
-    def eval(self, model):
-        try:    
-            return [value[self.value] for value in model.weights]
-        except KeyError:
-            return 0
+    def eval(self, model): 
+        result = []
+        
+        for k in model._weights:
+            try:
+                result.append(k[self.value])
+            except KeyError:
+                result.append(0)
+        
+        return result
     
     def __str__(self):
         return '  token: ' + self.value
             
-    

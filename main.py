@@ -5,18 +5,18 @@ if __name__ == "__main__":
     # Create a welcome message
     print("Welcome to the SRI")
     print("=================================")
-    path = 'corpus/cran/cran.all.1400'
+    path = 'D:/SRI/Dataset/cran.all.1400'
     print('Loading data...')
     with open(path, 'r', errors='ignore') as f:
         docs = CranCollection().parse(f)
-    vec = VectorSpace(docs)
+    # vec = VectorSpace(docs)
     boolean = Extended(docs)
 
-    while True:
-        query = input("Enter your query: ")
-        if query == 'q':
-            break
-        print()
+    # while True:
+    query = '( alda & mauro ) | stress'   # input("Enter your query: ")
+    # if query == 'q':
+    #     break
+    print()
         # ranking = vec.ranking(query, 5)
         # for i, doc in enumerate(ranking):
         #     print("Rank: ", i + 1)
@@ -25,6 +25,6 @@ if __name__ == "__main__":
         #     print("Corpus: ", doc.corpus)
         #     print()
         
-        ranking = boolean.ranking(query)
-        for elem in ranking:
-            print(elem)
+    ranking = boolean.ranking(query)
+    for elem in ranking:
+        print(elem)
