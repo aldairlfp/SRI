@@ -31,21 +31,22 @@ class Collection:
         self._corpus = corpus
         self._processor = processor
         self._lang = lang
-        self._pre_docs = self.explore_dir('corpus/' + corpus, '')
-
-    def explore_dir(self, r, p):
         docs = []
+        self.explore_dir('corpus/' + corpus, '', docs)
+        self._pre_docs = docs
+        os.chdir('../..')
+
+    def explore_dir(self, r, p, docs):
         os.chdir(r)
         elements = os.listdir()
         for path in elements:
+            n_p = p + '/' + path
             if os.path.isdir(path):
-                n_p = p + '/' + path
-                self.explore_dir(path, n_p)
+                self.explore_dir(path, n_p, docs)
                 os.chdir('..')
             else:
-                file = open(path, 'r', errors='ignore')
-                docs.append(file)
-                file.close()
+                if not path.endswith('.txt'):
+                    docs.append('corpus/' + self._corpus + n_p)
         return docs
 
     def parse(self):
@@ -55,9 +56,10 @@ class Collection:
 class CranCollection(Collection):
 
     def __init__(self, processor=default_processor, lang='english'):
-        super().__init__(processor, lang)
+        super().__init__('cran')
 
-    def parse(self, file):
+    def parse(self):
+        file = open(self._pre_docs[0], 'r')
         docs = []
         id = 0
         text = ''
@@ -76,7 +78,7 @@ class CranCollection(Collection):
                     text += line
                 elif line.split()[0] == '.I':
                     if in_text:
-                        doc = Document(id, subject, text, self.processor, self.lang)
+                        doc = Document(id, subject, text, self._processor, self._lang)
                         docs.append(doc)
                         in_text = 0
                         subject = ''
@@ -91,18 +93,18 @@ class CranCollection(Collection):
                 elif in_subject:
                     subject += line
             elif not line:
-                doc = Document(id, subject, text, self.processor, self.lang)
+                doc = Document(id, subject, text, self._processor, self._lang)
                 docs.append(doc)
                 break
-
+        file.close()
         return docs
 
 
 class NewsGroupCollection(Collection):
     def __init__(self, processor=default_processor, lang='english'):
-        super().__init__(processor, lang)
+        super().__init__('newsgroup')
 
-    def get_document(self, file):
+    def _get_document(self, file):
         text = ''
         subject = ''
         s = 1
@@ -115,3 +117,13 @@ class NewsGroupCollection(Collection):
                 s = 0
                 subject = ' '.join(line.split()[1:])
         return [subject, text]
+
+    def parse(self):
+        docs = []
+        for path in self._pre_docs:
+            file = open(path, 'r')
+            subject, text = self._get_document(file)
+            doc = Document(path, subject, text, self._processor, self._lang)
+            docs.append(doc)
+            file.close()
+        return docs
