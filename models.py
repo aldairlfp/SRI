@@ -1,11 +1,90 @@
-from collections import OrderedDict, Counter
+from collections import Counter
 
-from nltk.corpus import stopwords
-from nltk import word_tokenize
-import string
 import numpy as np
+from documents import Document
+from parse import Expression
+
+
 
 from data_collections import default_processor
+
+class Query(object):
+    
+    
+    def precedence(token):
+        """ Precedence of supported operators """
+        __precedence = {"&": 2, "|": 1}
+        try:
+            return __precedence[token]
+        except:
+            return -1
+    
+    
+    def is_left_bracket(token):
+        """ Returns true if left bracket """
+        return token == "("
+    
+    
+    def is_right_bracket(token):
+        """ Returns true if right bracket """
+        return token == ")"
+    
+    
+    def is_operator(token):
+        """ Returns true if operator """
+        return token == "&" or token == "|"
+    
+    
+    def parse(self, query, processor: default_processor, lang: str = 'english'):
+        """ Parse query into a list of tokens 
+        :param self: self
+        :type self: Query
+        
+        :param query: query to be parsed
+        :type query: str
+        
+        :param processor: processor to be used
+        :type processor: function
+        
+        :param lang: language of the query
+        :type lang: str
+        
+        :return: list of tokens and boolean indicating if query is conjuntive
+        :rtype : list, bool
+        :return: processor, is_conjuntive
+        """
+        
+        if '&' not in query:
+            return processor(query, lang), False
+        if '|' not in query:
+            return processor(query, lang), True
+            
+        disjunctions = []
+        current = 0
+        index = 0
+        rest = query
+        is_conjuntive = False
+        
+        while(len(rest) > 0):
+            if rest[index] == '(': 
+                disjunctions.append(processor(query[current:index], lang))
+                final = rest.findex(')')
+                index = final - 1
+                current = index + 2
+                disjunctions.append(self.parse(query[current:index], processor, lang))
+            elif rest[index] == ')':
+                raise ValueError('Unbalanced brackets')
+            elif rest[index] == '|':
+                disjunctions.append(processor(query[current:index], lang))
+                current = index + 1
+                is_conjuntive = True
+            index += 1
+            rest = rest[current:]
+            
+        if len(rest) > 0:
+            disjunctions.append(processor(query[current:], lang))
+            
+        return disjunctions, is_conjuntive        
 
 
 class VectorSpace(object):
@@ -72,7 +151,8 @@ class VectorSpace(object):
             else:
                 query_tfidf[word] = 1
         for word in query_tfidf:
-            query_tfidf[word] = (self.a + (1 - self.a) * query_tfidf[word] / max_freq) * self._idf_dict[word]
+            query_tfidf[word] = (
+                self.a + (1 - self.a) * query_tfidf[word] / max_freq) * self._idf_dict[word]
 
         scores = [0 for doc in self.docs]
         for i, doc in enumerate(self.docs):
@@ -85,170 +165,167 @@ class VectorSpace(object):
         return [self.docs[i] for i in scores]
 
 
-class Binary(object):
+class Extended(object):
+    def __init__(self, docs):
+        self.docs = docs
+        self._tf_dict = self.term_frequency()
+        self._idf_dict = self.inverse_doc_frequence()
+        self._tf_idf = self.tf_idf(docs)
+        self.vocabulary = self._idf_dict.keys()
+        self._weights = self.weight()
 
-    def __init__(self):
-        self.terms = []  # list to store the terms present in the documents
-        self.keys = []  # list to store the names of the documents
-        self.vec_Dic = {}  # dictionary to store the name of the document and the boolean vector as list
-        self.dicti = {}  # dictionary to store the name of the document and the terms present in it as a vector
-        self.dummy_List = []  # list for performing some operations and clearing them
-
-    def filter(self, documents, rows, cols):
-        """function to read and separate the name of the documents and the terms
-        present in it to a separate list  from the data frame and also create a
-        dictionary which has the name of the document as key and the terms present in
-        it as the list of strings  which is the value of the key"""
-
-        for i in range(rows):
-            for j in range(cols):
-                # traversal through the data frame
-
-                if j == 0:
-                    # first column has the name of the document in the csv file
-                    self.keys.append(documents.loc[i].iat[j])
-                else:
-                    self.dummy_List.append(documents.loc[i].iat[j])
-                    # dummy list to update the terms in the dictionary
-
-                    if documents.loc[i].iat[j] not in self.terms:
-                        # add the terms to the list if it is not present else continue
-                        self.terms.append(documents.loc[i].iat[j])
-
-            copy = self.dummy_List.copy()
-            # copying the dummy list to a different list
-
-            self.dicti.update({documents.loc[i].iat[0]: copy})
-            # adding the key value pair to a dictionary
-
-            self.dummy_List.clear()
-            # clearing the dummy list
-
-    def bool_Representation(self, rows, cols):
-        """In this function we get a boolean representation of the terms present in the
-        documents in the form of lists, later we create a dictionary which contains
-        the name of the documents as key and value as the list of boolean values
-        representing the terms present in the document"""
-
-        self.terms.sort()
-        # we sort the elements in the alphabetical order for the convenience, the order
-        # of the term does not make any difference
-
-        for i in self.dicti:
-            # for every document in the dictionary we check for each string present in
-            # the list
-
-            for j in self.terms:
-                # if the string is present in the list we append 1 else we append 0
-
-                if j in self.dicti[i]:
-                    self.dummy_List.append(1)
-                else:
-                    self.dummy_List.append(0)
-                # appending 1 or 0 for obtaining the boolean representation
-
-            copy = self.dummy_List.copy()
-            # copying the dummy list to a different list
-
-            self.vec_Dic.update({i: copy})
-            # adding the key value pair to a dictionary
-
-            self.dummy_List.clear()
-            # clearing the dummy list
-
-    def query_Vector(self, query):
-        """In this function we represent the query in the form of boolean vector"""
-
-        qvect = []
-        # query vector which is returned at the end of the function
-
-        for i in self.terms:
-            # if the word present in the list of terms is also present in the query
-            # then append 1 else append 0
-
-            if i in query:
-                qvect.append(1)
-            else:
-                qvect.append(0)
-
-        return qvect
-        # return the query vector which is obtained in the boolean form
-
-    def prediction(self, q_Vect):
-        """In this function we make the prediction regarding which document is related
-        to the given query by performing the boolean operations"""
-
-        dictionary = {}
-        listi = []
-        count = 0
-        # initialisation of the dictionary , list and a variable which is further
-        # required for performing the computation
-
-        term_Len = len(self.terms)
-        # number of terms present in the term list
-
-        for i in self.vec_Dic:
-            # for every document in the dictionary containing the terms present in it
-            # the form of boolean vector
-
-            for t in range(term_Len):
-                if q_Vect[t] == self.vec_Dic[i][t]:
-                    # if the words present in the query is also present in the
-                    # document or if the words present in the query is also absent in
-                    # the document
-
-                    count += 1
-                    # increase the value of count variable by one
-                    # the condition in which words present in document and absent in
-                    # query , present in query and absent in document is not considered
-
-            dictionary.update({i: count})
-            # dictionary update here the name of the document is the key and the
-            # count variable computed earlier is the value
-
-            count = 0
-            # reinitialization of count variable to 0
-
-        for i in dictionary:
-            listi.append(dictionary[i])
-            # here we append the count value to list
-
-        listi = sorted(listi, reverse=True)
-        # we sort the list in the descending order which is needed to rank the
-        # documents according to the relevance
-
-        ans = ' '
-        # variable to store the name of the document which is most relevant
-
-        print("ranking of the documents")
-
-        for count, i in enumerate(listi):
-
-            key = Binary.get_key(i, dictionary)
-            # Function call to get the key when the value is known
-            if count == 0:
-                ans = key
-                # to store the name of the document which is most relevant
-
-            print(key, "rank is", count + 1)
-            # print the name of the document along with its rank
-
-            dictionary.pop(key)
-            # remove the key from the dictionary after printing
-
-            print(ans, "is the most relevant document for the given query")
-            # to print the name of the document which is most relevant
-
-    @staticmethod
-    def get_key(val, dictionary):
         """
-        function to get the key from the value
-        :param dictionary: dictionary
-        :param val: value
-        :return: key
+        Initialize an instace of the model
+        :param docs: list of documents
+        
+        :type docs: Document
+        :return: None
         """
-        for key, value in dictionary.items():
-            if val == value:
-                return key
 
-        return "key doesn't exist"
+    def term_frequency(self):
+        tf_docs = [{} for doc in self.docs]
+
+        """
+        Calculate the term frequency for each word in each document
+        
+        :param self: instance of the model
+        :type self: Extended
+        
+        :rtype: list
+        :return: tf_docs
+        """
+
+        for doc in self.docs:
+            for i, word in enumerate(doc.norm_corpus):
+                if word in tf_docs[i]:
+                    tf_docs[i][word] += 1
+                else:
+                    tf_docs[i][word] = 1
+
+        return tf_docs
+
+    def inverse_doc_frequence(self):
+        df = {}
+
+        """
+        Calculate the inverse document frequency for each word in each document
+        
+        :param self: instance of the model
+        :type self: Extended
+        
+        :rtype: dict
+        :return: idf
+        """
+
+        for doc in self.docs:
+            for word in doc.norm_corpus:
+                if word in df:
+                    df[word] += 1
+                else:
+                    df[word] = 1
+        idf = {}
+        for word in df:
+            idf[word] = np.log10(len(self.docs) / df[word])
+        return idf
+
+    def tf_idf(self, doc: Document):
+        tf_idf_scr = [{} for doc in self.docs]
+
+        """
+        Calculate the tf-idf score for each word in each document
+        
+        :param self: instance of the model
+        :type self: Extended
+        
+        :param doc: list of documents
+        :type doc: Document
+        
+        :rtype: list
+        :return: tf_idf_scr
+        """
+
+        for i, doc in enumerate(self.docs):
+            for word in doc.norm_corpus:
+                try:
+                    tf = self._tf_dict[i][word]
+                    idf = self._idf_dict[word]
+                    tf_idf_scr[i][word] = tf * idf
+                except KeyError:
+                    pass
+        return tf_idf_scr
+
+    def weight(self):
+        """
+        Calculate the weight of each word in each document
+
+        :param self: instance of the model
+        :type self: Extended
+
+        :rtype: list
+        :return: weight
+        """
+
+        weight = []
+        for i, doc in enumerate(self.docs):
+            weight.append([])
+            for word in doc.norm_corpus:
+                try:
+                    weight[i].append({word : self.normalize_frequence(
+                        self) * self._idf_dict[word] / max(self._idf_dict[word])})
+                except KeyError:
+                    weight[i].append({word : 0})
+        return weight
+
+    def normalize_frequence(self):
+        """
+        Normalize the frequency of each word in each document
+
+        :param self: instance of the model
+        :type self: Extended
+
+        :rtype: list
+        :return: normalize_frequence
+        """
+
+        normalize_frequence = []
+        for i, doc in enumerate(self.docs):
+            normalize_frequence.append([])
+            for word in doc.norm_corpus:
+                try:
+                    normalize_frequence[i].append(
+                        self._tf_dict[i][word] / len(doc.norm_corpus))
+                except KeyError:
+                    normalize_frequence[i].append(0)
+        return normalize_frequence
+        
+    def ranking(self, r_query):
+        """ 
+        Method to rank the documents based on the query
+        
+        :param self: instance of the model
+        :type self: Extended
+        
+        :param r_query: query
+        :type r_query: str
+        
+        :rtype: list
+        :return: list of ranked documents
+        """
+        
+        # tokenize the query
+        query = r_query.split()
+        
+        # parse the query
+        expr = Expression('or')
+        expr.parse(query)
+        
+        # evaluate the query
+        rank = expr.evaluate(self)
+        
+        # sort the documents based on the score
+        rank = sorted(rank, key=lambda x: x[1], reverse=True)
+        
+        return rank[:10]
+        
+    
+
