@@ -61,7 +61,7 @@ class CranCollection(Collection):
     def parse(self):
         file = open(self._pre_docs[0], 'r')
         docs = []
-        id = 0
+        doc_id = 0
         text = ''
         subject = ''
         in_subject = 0
@@ -78,7 +78,7 @@ class CranCollection(Collection):
                     text += line
                 elif line.split()[0] == '.I':
                     if in_text:
-                        doc = Document(id, subject, text, self._processor, self._lang)
+                        doc = Document(doc_id, subject, text, self._processor, self._lang)
                         docs.append(doc)
                         in_text = 0
                         subject = ''
@@ -93,7 +93,7 @@ class CranCollection(Collection):
                 elif in_subject:
                     subject += line
             elif not line:
-                doc = Document(id, subject, text, self._processor, self._lang)
+                doc = Document(doc_id, subject, text, self._processor, self._lang)
                 docs.append(doc)
                 break
         file.close()
