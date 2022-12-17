@@ -59,13 +59,22 @@ class Ui_MainWindow(object):
         self.page_back.clicked.connect(self.backward)
 
         self.corpus_combo = QtWidgets.QComboBox(self.centralwidget)
-        self.corpus_combo.setGeometry(QtCore.QRect(20, 50, 131, 31))
+        self.corpus_combo.setGeometry(QtCore.QRect(45, 20, 131, 31))
         self.corpus_combo.setEditable(False)
         self.corpus_combo.setObjectName("corpus_combo")
 
         self.s_corpus = QtWidgets.QLabel(self.centralwidget)
-        self.s_corpus.setGeometry(QtCore.QRect(20, 30, 121, 17))
+        self.s_corpus.setGeometry(QtCore.QRect(5, 20, 40, 30))
         self.s_corpus.setObjectName("s_corpus")
+
+        self.model_combo = QtWidgets.QComboBox(self.centralwidget)
+        self.model_combo.setGeometry(QtCore.QRect(45, 60, 131, 31))
+        self.model_combo.setEditable(False)
+        self.model_combo.setObjectName("model_combo")
+
+        self.s_model = QtWidgets.QLabel(self.centralwidget)
+        self.s_model.setGeometry(QtCore.QRect(5, 60, 40, 30))
+        self.s_model.setObjectName("s_model")
 
         self.verticalLayout = QtWidgets.QVBoxLayout(self.centralwidget)
         self.verticalLayout.setObjectName("verticalLayout")
@@ -110,7 +119,7 @@ class Ui_MainWindow(object):
         self.recovered.setObjectName("Recovered")
 
         self.in_page = QtWidgets.QLabel(self.centralwidget)
-        self.in_page.setGeometry(QtCore.QRect(570, 90, 121, 17))
+        self.in_page.setGeometry(QtCore.QRect(570, 90, 100, 17))
         self.in_page.setObjectName("In_Page")
 
         self.retranslateUi(MainWindow)
@@ -197,12 +206,13 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "irAM"))
-        self.sys_name.setText(_translate("MainWindow", "irAM Searcher"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "SRI"))
+        self.sys_name.setText(_translate("MainWindow", "SRI Searcher"))
         self.search_button.setText(_translate("MainWindow", "Search"))
         self.page_back.setText(_translate("MainWindow", "<"))
         self.page_next.setText(_translate("MainWindow", ">"))
-        self.s_corpus.setText(_translate("MainWindow", "Select Corpus:"))
+        self.s_corpus.setText(_translate("MainWindow", "Corpus:"))
+        self.s_model.setText(_translate("MainWindow", "Model:"))
         self.in_page.setText(_translate("MainWindow", "Page " + str(self.page + 1) + '/' +
                                         str(len(self.rank_page))))
         if self.query != None:
@@ -271,5 +281,6 @@ def main():
     ui = Ui_MainWindow()
     ui.setupUi(MainWindow)
     ui.corpus_combo.addItems(['cran', 'newsgroup'])
+    ui.model_combo.addItems(['Vector Space', 'Extended Boolean', 'Probabilistic'])
     MainWindow.show()
     sys.exit(app.exec_())
