@@ -3,12 +3,13 @@ from time import time
 
 import models
 import data_collections
+import utils
 
 
 class Ui_MainWindow(object):
     def __init__(self):
-        docs = data_collections.CranCollection().parse()
-        self.model = models.VectorSpace(docs)
+        # docs = data_collections.CranCollection().parse()
+        self.model = utils.deserialize('models/boolean_extended.pkl')
         self.corpus = ''
         self.query = None
         self.recovered = None
