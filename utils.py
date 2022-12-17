@@ -1,4 +1,5 @@
 import numpy as np
+import pickle
 
 
 def normalize_frequency(docs, tf_dict):
@@ -63,3 +64,15 @@ def tfidf(docs, tf_dict, idf_dict):
             except KeyError:
                 pass
     return tf_idf_scr
+
+
+def serialize(data, path):
+    with open(path, "wb") as outfile:
+        pickle.dump(data, outfile)
+    return data
+
+
+def deserialize(path):
+    with open(path, "rb") as infile:
+        data = pickle.load(infile)
+    return data
