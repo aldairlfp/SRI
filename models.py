@@ -52,7 +52,6 @@ class BooleanExtended(object):
         self._df_dict = utils.wordDocFre(self.docs)
         self._idf_dict = utils.inverseDocFre(self._df_dict, len(self.docs))  # returns idf scores
         self._tf_idf = utils.tfidf(self.docs, self._tf_dict, self._idf_dict)  # returns tf-idf scores
-        self.vocabulary = self._idf_dict.keys()
         self._norm_frec = utils.normalize_frequency(self.docs, self._tf_idf)
         self._weights = self.weight()
 
