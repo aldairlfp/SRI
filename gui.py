@@ -5,10 +5,12 @@ import models
 import data_collections
 import utils
 
+models = {'Vector Space': models.VectorSpace, 'Extended Boolean': models.BooleanExtended}
+models_s = {'Vector Space': 'vector_space', 'Extended Boolean': 'boolean_extended', 'Probabilistic': 'probabilistic'}
+corpus = {'cran': data_collections.CranCollection, 'newsgroup': data_collections.NewsGroupCollection}
 
 class Ui_MainWindow(object):
     def __init__(self):
-        # docs = data_collections.CranCollection().parse()
         self.model = utils.deserialize('models/boolean_extended.pkl')
         self.corpus = ''
         self.query = None
@@ -124,11 +126,23 @@ class Ui_MainWindow(object):
 
         self.retranslateUi(MainWindow)
         self.corpus_combo.currentTextChanged['QString'].connect(self.set_corpus)
+        self.model_combo.currentTextChanged['QString'].connect(self.set_model)
         self.search_button.clicked.connect(self.search_query)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def set_corpus(self, text):
         self.corpus = text
+        self.query = None
+        self.search_input.clear()
+
+    def set_model(self, text):
+        pre_model = models[text]
+        path = 'models/' + models_s[text] + '_' + self.corpus + '.pkl'
+        try:
+            self.model = utils.deserialize(path)
+        except FileNotFoundError:
+            self.model = pre_model(corpus[self.corpus]().parse(), self.corpus)
+            utils.serialize(self.model, path)
         self.query = None
         self.search_input.clear()
 
