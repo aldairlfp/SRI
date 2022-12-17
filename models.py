@@ -8,9 +8,10 @@ import utils
 
 
 class VectorSpace(object):
-    def __init__(self, docs):
+    def __init__(self, docs, corpus_type):
         M = len(docs)  # number of files in dataset
         self.docs = docs
+        self._corpus_type = corpus_type
         self._tf_dict = utils.termFrequencyInDoc(self.docs)  # returns term frequency
         self._df_dict = utils.wordDocFre(self.docs)  # returns document frequencies
         self._idf_dict = utils.inverseDocFre(self._df_dict, M)  # returns idf scores
@@ -44,10 +45,14 @@ class VectorSpace(object):
         scores = scores.argsort()[-top:][::-1]
         return [self.docs[i] for i in scores]
 
+    def __str__(self):
+        return "vector_space" + '_' + self._corpus_type
+
 
 class BooleanExtended(object):
-    def __init__(self, docs):
+    def __init__(self, docs, corpus_type):
         self.docs = docs
+        self._corpus_type = corpus_type
         self._tf_dict = utils.termFrequencyInDoc(self.docs)  # returns term frequency
         self._df_dict = utils.wordDocFre(self.docs)
         self._idf_dict = utils.inverseDocFre(self._df_dict, len(self.docs))  # returns idf scores
@@ -104,3 +109,6 @@ class BooleanExtended(object):
         scores = np.array(rank)
         scores = scores.argsort()[-top:][::-1]
         return [self.docs[i] for i in scores]
+
+    def __str__(self):
+        return "extended_boolean" + "_" + self._corpus_type
