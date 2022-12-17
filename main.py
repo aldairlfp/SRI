@@ -7,8 +7,12 @@ if __name__ == "__main__":
     print("=================================")
     path = 'corpus/cran/cran.all.1400'
     print('Loading data...')
-    docs = CranCollection().parse()
-    vec = BooleanExtended(docs)
+    try:
+        vec = utils.deserialize('models/boolean_extended.pkl')
+    except FileNotFoundError:
+        docs = CranCollection().parse()
+        vec = BooleanExtended(docs)
+        utils.serialize(vec, 'models/boolean_extended.pkl')
 
     while True:
         query = input("Enter your query: ")
