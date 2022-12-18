@@ -22,8 +22,11 @@ class VectorSpace(object):
         query = default_processor(query, 'english')
         # create counter for query
         query_counter = Counter(query)
-        # get from counter max frequency
-        max_freq = query_counter.most_common(1)[0][1]
+        try:
+            # get from counter max frequency
+            max_freq = query_counter.most_common(1)[0][1]
+        except IndexError:
+            max_freq = 0
         query = [word for word in query if word in self._idf_dict]
         query_tfidf = {}
         for word in query:
@@ -32,8 +35,7 @@ class VectorSpace(object):
             else:
                 query_tfidf[word] = 1
         for word in query_tfidf:
-            query_tfidf[word] = (
-                                        self.a + (1 - self.a) * query_tfidf[word] / max_freq) * self._idf_dict[word]
+            query_tfidf[word] = (self.a + (1 - self.a) * query_tfidf[word] / max_freq) * self._idf_dict[word]
 
         scores = [0 for doc in self.docs]
         for i, doc in enumerate(self.docs):
@@ -41,9 +43,10 @@ class VectorSpace(object):
                 if word in self._tf_idf[i]:
                     scores[i] += self._tf_idf[i][word] * query_tfidf[word] / np.sqrt(
                         sum([self._tf_idf[i][word] ** 2 for word in self._tf_idf[i]]))
-        scores = np.array(scores)
-        scores = scores.argsort()[-top:][::-1]
-        return [self.docs[i] for i in scores]
+
+        scores_index = np.array(scores)
+        scores_index = scores_index.argsort()[:][::-1]
+        return [self.docs[i] for i in scores_index if scores[i] > 0]
 
     def __str__(self):
         return "vector_space" + '_' + self._corpus_type
