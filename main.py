@@ -5,21 +5,25 @@ if __name__ == "__main__":
     # Create a welcome message
     print("Welcome to the SRI")
     print("=================================")
-    path = 'corpus/cran/cran.all.1400'
+    path = 'D:/SRI/Dataset/cran.all.1400'
     print('Loading data...')
     with open(path, 'r', errors='ignore') as f:
         docs = CranCollection().parse(f)
-    vec = VectorSpace(docs)
+    # vec = VectorSpace(docs)
+    prob = Probabilistic(docs)
 
     while True:
         query = input("Enter your query: ")
-        if query == 'q':
-            break
         print()
-        ranking = vec.ranking(query, 5)
+        ranking = prob.get_ranking(query, 5)
         for i, doc in enumerate(ranking):
             print("Rank: ", i + 1)
             print("Doc ID: ", doc.id)
             print("Title: ", doc.title)
             print("Corpus: ", doc.corpus)
             print()
+        
+        print("Did you finish? (y/n)\n")
+        ini = input()
+        if ini == 'y':
+            break

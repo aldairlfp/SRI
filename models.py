@@ -88,36 +88,29 @@ class Probabilistic(object):
         super().__init__()
 
         self.documents = docs
-
         self.document_vectors: list[list[str]] = []
-        """This is the dictionary where the key is the document_id and the value is a list of tuples (term_index, 
-        occurrence) """
-        # This acts as a cache for storing the last ranking of a consult, this is in the case of handling result pages
         self.last_ranking: list[tuple[float, int]] = []
-
         self.query_document_relevance: dict[tuple[str, int], dict[str, float]] = {}
 
         self.query_document_not_relevance: dict[tuple[str, int], dict[str, float]] = {}
         """
             This contains the relevance of a query in a document
-            """
-
-    def add_document(self, document):
-        self.documents.append(document)
-        self.document_vectors.append([])
-        for term in (document.doc_normalized_name + document.doc_normalized_body):
-            self.document_vectors[-1].append(term)
+        """
 
     def generate_document_vectors(self):
         """Generate the document vectors for the model
-            Returns:
-                None: The documents vector are calculated here and stored in the model for later use
-            """
+        
+        :param self: The model
+        :type self: Probabilistic
+        
+        :return: None
+        :rtype: None
+        """
         self.document_vectors = []
 
         for doc_index, doc in enumerate(self.documents):
             self.document_vectors.append([])
-            for term in (doc.doc_normalized_name + doc.doc_normalized_body):
+            for term in (doc.norm_title + doc.norm_corpus):
                 self.document_vectors[doc_index].append(term)
 
     def get_term_frequency(self, term: str) -> float:
@@ -127,41 +120,131 @@ class Probabilistic(object):
                 n_i += 1
         return n_i / len(self.documents)
 
-    def generate_query_vector(self, query: set, lang: str = 'english'):
+    def generate_query_vector(self, query, lang = 'english'):
         return default_processor(query, lang)
 
-    def get_relevance(self, query, document_id, term):
-        if (query, document_id) in self.query_document_relevance:
-            dr = self.query_document_relevance[(query, document_id)][term]
-            dnr = self.query_document_not_relevance[(query, document_id)][term]
+    def get_relevance(self, document_id, term):
+        """Get the relevance of a term in a document for a query
+        
+        :param self: The model
+        :type self: Probabilistic
+        
+        :param query: The query
+        :type query: str
+        
+        :param document_id: The document id
+        :type document_id: int
+        
+        :param term: The term
+        :type term: str
+        
+        :return: The relevance of the term in the document for the query
+        :rtype: float
+        """
+        if (term, document_id) in self.query_document_relevance:
+            dr = self.query_document_relevance[(term, document_id)][term]
+            dnr = self.query_document_not_relevance[(term, document_id)][term]
             return dr, dnr
 
         dr = 0.5
         dnr = self.get_term_frequency(term)
 
-        self.query_document_relevance[(query, document_id)] = {term: dr}
-        self.query_document_not_relevance[(query, document_id)] = {term: dnr}
+        self.query_document_relevance[(term, document_id)] = {term: dr}
+        self.query_document_not_relevance[(term, document_id)] = {term: dnr}
 
         return dr, dnr
 
-    def similarity(self, raw_query: str, query: list[str], document: list[str], document_id: int) -> float:
-        """Calculate the similarity between a query and a document"""
+    def similarity(self, query, document, document_id) -> float:
+        """Calculate the similarity between a query and a document
+        
+        :param self: The model
+        :type self: Probabilistic
+        
+        :param raw_query: The raw query
+        :type raw_query: str
+         
+        :param query: The query vector
+        :type query: list[str]
+         
+        :param document: The document vector
+        :type document: list[str]
+        
+        :param document_id: The document id
+        :type document_id: int
+        
+        :return: The similarity between the query and the document
+        :rtype: float
+        """
         similarity = 0
 
         for common_term in query:
             if common_term in document:
-                p_i, r_i = self.get_relevance(raw_query, document_id, common_term)
+                p_i, r_i = self.get_relevance(document_id, common_term)
                 similarity += math.log((p_i * (1 - r_i)) / (r_i * (1 - p_i)))
 
         return 0 if similarity == 0 else math.log(similarity)
 
-    def get_ranking(self, query: str, first_n_results: int, lang: str = 'english'):
+    def get_ranking(self, query, top, lang = 'english'):
+        """Get the ranking of a query
+        
+        :param self: The model
+        :type self: Probabilistic
+        
+        :param query: The user query
+        :type query: str
+        
+        :param top: The number of documents to be returned
+        :type top: int
+        
+        :param lang: The language of the query
+        :type lang: str
+        
+        :return: The list of documents ranked
+        :rtype: list[Document]
+        """
+    
         query_vector = self.generate_query_vector(query, lang)
-        doc_rank: list[tuple[float, int]] = []
+        self.generate_document_vectors()
+        doc_rank = []
+        
         for index, _ in enumerate(self.documents):
             doc_vector = self.document_vectors[index]
-            sim = self.similarity(query, query_vector, doc_vector, index)
-            doc_rank.append((sim, index))
+            sim = self.similarity(query_vector, doc_vector, index)
+            
+            if sim > 0.5:
+                doc_rank.append((sim, index))
         self.last_ranking = sorted(
             doc_rank, key=lambda rank_index: rank_index[0], reverse=True)
-        return [self.documents[x[1]] for x in self.last_ranking[:first_n_results]]
+        return [self.documents[x[1]] for x in self.last_ranking[:top]]
+
+    def feedback(self, query, document_id, relevance):
+        """Give feedback to the model
+        
+        :param self: The model
+        :type self: Probabilistic
+        
+        :param query: The query
+        :type query: str
+        
+        :param document_id: The document id
+        :type document_id: int
+        
+        :param relevance: The relevance of the document for the query
+        :type relevance: bool
+        
+        :return: None
+        :rtype: None
+        """
+        query_vector = self.generate_query_vector(query)
+        doc_vector = self.document_vectors[document_id]
+        for term in query_vector:
+            if term in doc_vector:
+                dr, dnr = self.get_relevance(document_id, term)
+                if relevance:
+                    dr += 0.1
+                    dnr -= 0.1
+                else:
+                    dr -= 0.1
+                    dnr += 0.1
+                self.query_document_relevance[(term, document_id)][term] = dr
+                self.query_document_not_relevance[(term, document_id)][term] = dnr
