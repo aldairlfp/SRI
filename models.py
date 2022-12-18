@@ -58,7 +58,7 @@ class VectorSpace(Model):
         scores_index = scores_index.argsort()[:][::-1]
         return [self.docs[i] for i in scores_index if scores[i] > 0]
 
-    def rocchio(self, query, alpha, beta, gamma, cr, cnr):
+    def rocchio(self, query, cr, cnr, alpha=1, beta=0.75, gamma=0.15):
         qm = self.calculate_weights_query(query)
 
         for word in qm:
