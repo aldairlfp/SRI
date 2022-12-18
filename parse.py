@@ -36,7 +36,7 @@ class BooleanExpression(object):
 
     def eval(self, model):
         count = {}
-        for k in range(len(model._weights) + 1):
+        for k in range(len(model._weights)):
             count[k] = 0
         result = []
 

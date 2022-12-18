@@ -1,7 +1,9 @@
 from models import *
 from data_collections import *
+import gui
 
-if __name__ == "__main__":
+
+def main():
     # Create a welcome message
     print("Welcome to the SRI")
     print("=================================")
@@ -26,3 +28,7 @@ if __name__ == "__main__":
             print("Title: ", doc.title)
             print("Corpus: ", doc.corpus)
             print()
+
+
+if __name__ == "__main__":
+    gui.main()
