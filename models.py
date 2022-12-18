@@ -2,6 +2,7 @@ from collections import Counter
 import numpy as np
 from collections import defaultdict
 import math
+import os
 
 from data_collections import default_processor
 
@@ -91,8 +92,9 @@ class Probabilistic(object):
         self.document_vectors: list[list[str]] = []
         self.last_ranking: list[tuple[float, int]] = []
         self.query_document_relevance: dict[tuple[str, int], dict[str, float]] = {}
-
         self.query_document_not_relevance: dict[tuple[str, int], dict[str, float]] = {}
+        
+        self.load_feedback()
         """
             This contains the relevance of a query in a document
         """
@@ -216,7 +218,7 @@ class Probabilistic(object):
         self.last_ranking = sorted(
             doc_rank, key=lambda rank_index: rank_index[0], reverse=True)
         
-        
+        self.feedback(query, doc_rank)
         
         return [self.documents[x[1]] for x in self.last_ranking[:top]]
 
@@ -236,6 +238,8 @@ class Probabilistic(object):
         :rtype: None
         """
         query_vector = self.generate_query_vector(query)
+        self.load_feedback()
+        
         for term in query_vector:
             ocurrences = 0
             
@@ -243,26 +247,31 @@ class Probabilistic(object):
                 if term in doc:
                     ocurrences += 1
                     
-            for doc in doc_rank: 
+            for doc in [(self.document_vectors[x[1]], x[1]) for x in doc_rank]: 
                 dr, dnr = self.get_relevance(doc[1], term)
                 total = 0
-                if term in doc_rank[0].norm_title + doc_rank[0].norm_corpus:
+                
+                if term in doc[0]:
                     total += 1
             
-                dr = (dr*5 + total)/(total + 5)
+                dr = (dr*10 + total)/(total + 10)
                 self.query_document_relevance[(term, doc[1])][term] = dr
                 
                 dnr = (ocurrences - total)/(len(self.document_vectors) - len(doc_rank))
                 self.query_document_not_relevance[(term, doc[1])][term] = dnr
                 
+        self.save_feedback()
+                
     def save_feedback(self):
         file = open("feedback.txt", "w")
         
+        file.write("query document relevance\n")
         for key, value in self.query_document_relevance.items():
             for var in key:
                 file.write(str(var) + " ")
             file.write(str(value) + "\n")
         
+        file.write("query document not relevance\n")
         for key, value in self.query_document_not_relevance.items():
             for var in key:
                 file.write(str(var) + " ")
@@ -271,10 +280,20 @@ class Probabilistic(object):
     def load_feedback(self):
         try:
             file = open("feedback.txt", "r")
-            for line in file:
+            lines = file.readlines()
+            index = 0
+            for line in lines:
+                index += 1
+                if line == "query document relevance\n":
+                    continue
+                if 'not relevance' in line:
+                    break
                 line = line.split()
-                self.query_document_relevance[(line[0], int(line[1]))] = {line[0]: float(line[2])}
-                self.query_document_not_relevance[(line[0], int(line[1]))] = {line[0]: float(line[2])}
+                self.query_document_relevance[(line[0], int(line[1]))] = {line[0]: float(line[3][:-1])}
+            
+            for line in lines[index:]:
+                line = line.split()
+                self.query_document_not_relevance[(line[0], int(line[1]))] = {line[0]: float(line[3][:-1])}
         except:
             pass
                 
