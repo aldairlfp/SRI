@@ -9,6 +9,7 @@ models = {'Vector Space': models.VectorSpace, 'Extended Boolean': models.Boolean
 models_s = {'Vector Space': 'vector_space', 'Extended Boolean': 'boolean_extended', 'Probabilistic': 'probabilistic'}
 corpus = {'cran': data_collections.CranCollection, 'newsgroup': data_collections.NewsGroupCollection}
 
+
 class Ui_MainWindow(object):
     def __init__(self):
         self.model = utils.deserialize('models/boolean_extended.pkl')
@@ -266,7 +267,6 @@ class Ui_MainWindow(object):
 
         def relevant(self, c):
             self.doc.set_relevance(c.isChecked())
-
 
 
 def main():
