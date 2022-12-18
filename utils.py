@@ -25,8 +25,8 @@ def normalize_frequency(docs, tf_dict):
 def termFrequencyInDoc(docs):
     tf_docs = [{} for doc in docs]
 
-    for doc in docs:
-        for i, word in enumerate(doc.norm_corpus):
+    for i, doc in enumerate(docs):
+        for word in doc.norm_corpus:
             if word in tf_docs[i]:
                 tf_docs[i][word] += 1
             else:
