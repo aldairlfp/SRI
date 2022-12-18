@@ -80,10 +80,11 @@ class CranCollection(Collection):
                     if in_text:
                         doc = Document(doc_id, subject, text, self._processor, self._lang)
                         docs.append(doc)
+                        doc_id += 1
                         in_text = 0
                         subject = ''
                         text = ''
-                    doc_id = int(line.split()[1])
+                    # doc_id = int(line.split()[1])
                 elif line.split()[0] == '.T':
                     in_subject = 1
                 elif line.split()[0] == '.W':
@@ -95,6 +96,7 @@ class CranCollection(Collection):
             elif not line:
                 doc = Document(doc_id, subject, text, self._processor, self._lang)
                 docs.append(doc)
+                doc_id += 1
                 break
         file.close()
         return docs
