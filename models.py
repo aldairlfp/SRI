@@ -13,9 +13,24 @@ class Query(object):
         self.cr: list = cr
         self.cnr: list = cnr
 
+    def set_relevance(self, d):
+        if d not in self.cr:
+            self.cr.append(d)
+        if d in self.cnr:
+            self.cnr.remove(d)
+
+    def set_non_relevance(self, d):
+        if d not in self.cnr:
+            self.cnr.append(d)
+        if d in self.cr:
+            self.cr.remove(d)
+
 
 class Model(object):
     def calculate_weights_query(self, query):
+        raise NotImplementedError
+
+    def create_query(self, text):
         raise NotImplementedError
 
 
@@ -23,12 +38,12 @@ class VectorSpace(Model):
     def __init__(self, docs, corpus_type):
         M = len(docs)  # number of files in dataset
         self.docs = docs
+        self.querys = {}
         self._corpus_type = corpus_type
         self._tf_dict = utils.termFrequencyInDoc(self.docs)  # returns term frequency
         self._df_dict = utils.wordDocFre(self.docs)  # returns document frequencies
         self._idf_dict = utils.inverseDocFre(self._df_dict, M)  # returns idf scores
         self._tf_idf = utils.tfidf(self.docs, self._tf_dict, self._idf_dict)  # returns tf-idf scores
-        self._querys = {}
 
     def calculate_weights_query(self, query, a=0.5):
         query = default_processor(query, 'english')
@@ -61,16 +76,47 @@ class VectorSpace(Model):
         return scores
 
     def ranking(self, query):
-        if query not in self._querys:
+        if query not in self.querys:
+            self.create_query(query)
             query_tfidf = self.calculate_weights_query(query)
         else:
-            query_tfidf = self.rocchio(query, self._querys[query].cr, self._querys[query].cnr)
+            self.fix_relevance(query)
+            query_tfidf = self.rocchio(query, self.querys[query].cr, self.querys[query].cnr)
 
         scores = self.sim(query_tfidf)
 
         scores_index = np.array(scores)
         scores_index = scores_index.argsort()[:][::-1]
         return [self.docs[i] for i in scores_index if scores[i] > 0]
+
+    def create_query(self, text):
+        self.querys[text] = Query(text, [], [])
+
+    def fix_relevance(self, query):
+        for doc in self.querys[query].cr:
+            if not doc.is_relevant:
+                self.querys[query].cr.remove(doc)
+                self.querys[query].cnr.append(doc)
+        for doc in self.querys[query].cnr:
+            if doc.is_relevant:
+                self.querys[query].cnr.remove(doc)
+                self.querys[query].cr.append(doc)
+
+    def set_relevance(self, query, d):
+        if query not in self.querys:
+            self.querys[query] = Query(query, [d], [])
+        elif d not in self.querys[query].cr:
+            self.querys[query].cr.append(d)
+        if d in self.querys[query].cnr:
+            self.querys[query].cnr.remove(d)
+
+    def set_non_relevance(self, query, d):
+        if query not in self.querys:
+            self.querys[query] = Query(query, [], [d])
+        elif d not in self.querys[query].cnr:
+            self.querys[query].cnr.append(d)
+        if d in self.querys[query].cr:
+            self.querys[query].cr.remove(d)
 
     def rocchio(self, query, cr, cnr, alpha=1, beta=0.75, gamma=0.15):
         """
@@ -90,16 +136,16 @@ class VectorSpace(Model):
 
         for doc in cr:
             doc_tfidf = self._tf_idf[doc.id]
-            for word in qm:
-                if word in doc_tfidf:
+            for word in doc_tfidf:
+                if word in qm:
                     qm[word] += beta * doc_tfidf[word] / len(cr)
                 else:
                     qm[word] = doc_tfidf[word]
 
         for doc in cnr:
             doc_tfidf = self._tf_idf[doc.id]
-            for word in qm:
-                if word in doc_tfidf:
+            for word in doc_tfidf:
+                if word in qm:
                     qm[word] -= gamma * doc_tfidf[word] / len(cnr)
                 else:
                     qm[word] = doc_tfidf[word]
