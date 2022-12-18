@@ -11,5 +11,5 @@ class Document:
         self.norm_corpus = processor(corpus, lang)
         self.is_relevant = False
 
-    def set_relevance(self):
-        self.is_relevant = True
+    def set_relevance(self, relevance):
+        self.is_relevant = relevance
