@@ -7,6 +7,13 @@ from data_collections import default_processor
 import utils
 
 
+class Query(object):
+    def __init__(self, text: str, cr: list, cnr: list):
+        self.text: str = text
+        self.cr: list = cr
+        self.cnr: list = cnr
+
+
 class Model(object):
     def calculate_weights_query(self, query):
         raise NotImplementedError
@@ -21,9 +28,9 @@ class VectorSpace(Model):
         self._df_dict = utils.wordDocFre(self.docs)  # returns document frequencies
         self._idf_dict = utils.inverseDocFre(self._df_dict, M)  # returns idf scores
         self._tf_idf = utils.tfidf(self.docs, self._tf_dict, self._idf_dict)  # returns tf-idf scores
-        self.a = 0.5
+        self._querys = {}
 
-    def calculate_weights_query(self, query):
+    def calculate_weights_query(self, query, a=0.5):
         query = default_processor(query, 'english')
         # create counter for query
         query_counter = Counter(query)
@@ -40,25 +47,42 @@ class VectorSpace(Model):
             else:
                 query_tfidf[word] = 1
         for word in query_tfidf:
-            query_tfidf[word] = (self.a + (1 - self.a) * query_tfidf[word] / max_freq) * self._idf_dict[word]
+            query_tfidf[word] = (a + (1 - a) * query_tfidf[word] / max_freq) * self._idf_dict[word]
 
         return query_tfidf
 
-    def ranking(self, query):
-        query_tfidf = self.calculate_weights_query(query)
-
+    def sim(self, query_tfidf):
         scores = [0 for doc in self.docs]
         for i, doc in enumerate(self.docs):
             for word in query_tfidf:
                 if word in self._tf_idf[i]:
                     scores[i] += self._tf_idf[i][word] * query_tfidf[word] / np.sqrt(
                         sum([self._tf_idf[i][word] ** 2 for word in self._tf_idf[i]]))
+        return scores
+
+    def ranking(self, query):
+        if query not in self._querys:
+            query_tfidf = self.calculate_weights_query(query)
+        else:
+            query_tfidf = self.rocchio(query, self._querys[query].cr, self._querys[query].cnr)
+
+        scores = self.sim(query_tfidf)
 
         scores_index = np.array(scores)
         scores_index = scores_index.argsort()[:][::-1]
         return [self.docs[i] for i in scores_index if scores[i] > 0]
 
     def rocchio(self, query, cr, cnr, alpha=1, beta=0.75, gamma=0.15):
+        """
+        Rocchio algorithm
+        :param query: query
+        :param cr: relevant documents
+        :param cnr: non-relevant documents
+        :param alpha: weight of query
+        :param beta: weight of relevant documents
+        :param gamma: weight of non-relevant documents
+        :return: new query
+        """
         qm = self.calculate_weights_query(query)
 
         for word in qm:
@@ -81,7 +105,6 @@ class VectorSpace(Model):
                     qm[word] = doc_tfidf[word]
 
         return qm
-
 
     def __str__(self):
         return "vector_space" + '_' + self._corpus_type
