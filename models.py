@@ -215,9 +215,12 @@ class Probabilistic(object):
                 doc_rank.append((sim, index))
         self.last_ranking = sorted(
             doc_rank, key=lambda rank_index: rank_index[0], reverse=True)
+        
+        
+        
         return [self.documents[x[1]] for x in self.last_ranking[:top]]
 
-    def feedback(self, query, document_id, relevance):
+    def feedback(self, query, doc_rank):
         """Give feedback to the model
         
         :param self: The model
@@ -226,25 +229,55 @@ class Probabilistic(object):
         :param query: The query
         :type query: str
         
-        :param document_id: The document id
-        :type document_id: int
-        
-        :param relevance: The relevance of the document for the query
-        :type relevance: bool
+        :param doc_rank: The final rank for the query
+        :type doc_rank: list[Document]
         
         :return: None
         :rtype: None
         """
         query_vector = self.generate_query_vector(query)
-        doc_vector = self.document_vectors[document_id]
         for term in query_vector:
-            if term in doc_vector:
-                dr, dnr = self.get_relevance(document_id, term)
-                if relevance:
-                    dr += 0.1
-                    dnr -= 0.1
-                else:
-                    dr -= 0.1
-                    dnr += 0.1
-                self.query_document_relevance[(term, document_id)][term] = dr
-                self.query_document_not_relevance[(term, document_id)][term] = dnr
+            ocurrences = 0
+            
+            for doc in self.document_vectors:
+                if term in doc:
+                    ocurrences += 1
+                    
+            for doc in doc_rank: 
+                dr, dnr = self.get_relevance(doc[1], term)
+                total = 0
+                if term in doc_rank[0].norm_title + doc_rank[0].norm_corpus:
+                    total += 1
+            
+                dr = (dr*5 + total)/(total + 5)
+                self.query_document_relevance[(term, doc[1])][term] = dr
+                
+                dnr = (ocurrences - total)/(len(self.document_vectors) - len(doc_rank))
+                self.query_document_not_relevance[(term, doc[1])][term] = dnr
+                
+    def save_feedback(self):
+        file = open("feedback.txt", "w")
+        
+        for key, value in self.query_document_relevance.items():
+            for var in key:
+                file.write(str(var) + " ")
+            file.write(str(value) + "\n")
+        
+        for key, value in self.query_document_not_relevance.items():
+            for var in key:
+                file.write(str(var) + " ")
+            file.write(str(value) + "\n")
+            
+    def load_feedback(self):
+        try:
+            file = open("feedback.txt", "r")
+            for line in file:
+                line = line.split()
+                self.query_document_relevance[(line[0], int(line[1]))] = {line[0]: float(line[2])}
+                self.query_document_not_relevance[(line[0], int(line[1]))] = {line[0]: float(line[2])}
+        except:
+            pass
+                
+        
+            
+        
