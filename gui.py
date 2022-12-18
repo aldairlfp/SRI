@@ -34,7 +34,7 @@ class Ui_MainWindow(object):
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.sys_name = QtWidgets.QLabel(self.centralwidget)
-        self.sys_name.setGeometry(QtCore.QRect(440, 10, 171, 41))
+        self.sys_name.setGeometry(QtCore.QRect(400, 10, 300, 41))
         font = QtGui.QFont()
         font.setFamily("Ubuntu")
         font.setPointSize(20)
@@ -220,8 +220,9 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "SRI"))
-        self.sys_name.setText(_translate("MainWindow", "SRI Searcher"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "Find All"))
+        MainWindow.setWindowIcon(QtGui.QIcon('icon.ico'))
+        self.sys_name.setText(_translate("MainWindow", "Find All - Search Engine"))
         self.search_button.setText(_translate("MainWindow", "Search"))
         self.page_back.setText(_translate("MainWindow", "<"))
         self.page_next.setText(_translate("MainWindow", ">"))
@@ -258,7 +259,7 @@ class Ui_MainWindow(object):
 
             # if doc in query.get_relevants():
             #     self.check.setChecked(True)
-            self.check.setChecked(True)
+            self.check.setChecked(False)
 
             self.my_layout.addWidget(self.check)
             # self.check.stateChanged.connect(lambda: self.relevant(self.check))
