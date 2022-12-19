@@ -1,7 +1,6 @@
 from collections import Counter
 import numpy as np
 
-from documents import Document
 from parse import BooleanExpression
 from data_collections import default_processor
 import utils
@@ -27,6 +26,35 @@ class Query(object):
 
 
 class Model(object):
+    def __init__(self):
+        self.querys = {}
+
+    def fix_relevance(self, query):
+        for doc in self.querys[query].cr:
+            if not doc.is_relevant:
+                self.querys[query].cr.remove(doc)
+                self.querys[query].cnr.append(doc)
+        for doc in self.querys[query].cnr:
+            if doc.is_relevant:
+                self.querys[query].cnr.remove(doc)
+                self.querys[query].cr.append(doc)
+
+    def set_relevance(self, query, d):
+        if query not in self.querys:
+            self.querys[query] = Query(query, [d], [])
+        elif d not in self.querys[query].cr:
+            self.querys[query].cr.append(d)
+        if d in self.querys[query].cnr:
+            self.querys[query].cnr.remove(d)
+
+    def set_non_relevance(self, query, d):
+        if query not in self.querys:
+            self.querys[query] = Query(query, [], [d])
+        elif d not in self.querys[query].cnr:
+            self.querys[query].cnr.append(d)
+        if d in self.querys[query].cr:
+            self.querys[query].cr.remove(d)
+
     def calculate_weights_query(self, query):
         raise NotImplementedError
 
@@ -36,9 +64,9 @@ class Model(object):
 
 class VectorSpace(Model):
     def __init__(self, docs, corpus_type):
+        super().__init__()
         M = len(docs)  # number of files in dataset
         self.docs = docs
-        self.querys = {}
         self._corpus_type = corpus_type
         self._tf_dict = utils.termFrequencyInDoc(self.docs)  # returns term frequency
         self._df_dict = utils.wordDocFre(self.docs)  # returns document frequencies
@@ -92,32 +120,6 @@ class VectorSpace(Model):
     def create_query(self, text):
         self.querys[text] = Query(text, [], [])
 
-    def fix_relevance(self, query):
-        for doc in self.querys[query].cr:
-            if not doc.is_relevant:
-                self.querys[query].cr.remove(doc)
-                self.querys[query].cnr.append(doc)
-        for doc in self.querys[query].cnr:
-            if doc.is_relevant:
-                self.querys[query].cnr.remove(doc)
-                self.querys[query].cr.append(doc)
-
-    def set_relevance(self, query, d):
-        if query not in self.querys:
-            self.querys[query] = Query(query, [d], [])
-        elif d not in self.querys[query].cr:
-            self.querys[query].cr.append(d)
-        if d in self.querys[query].cnr:
-            self.querys[query].cnr.remove(d)
-
-    def set_non_relevance(self, query, d):
-        if query not in self.querys:
-            self.querys[query] = Query(query, [], [d])
-        elif d not in self.querys[query].cnr:
-            self.querys[query].cnr.append(d)
-        if d in self.querys[query].cr:
-            self.querys[query].cr.remove(d)
-
     def rocchio(self, query, cr, cnr, alpha=1, beta=0.75, gamma=0.15):
         """
         Rocchio algorithm
@@ -156,8 +158,9 @@ class VectorSpace(Model):
         return "vector_space" + '_' + self._corpus_type
 
 
-class BooleanExtended(object):
+class BooleanExtended(Model):
     def __init__(self, docs, corpus_type):
+        super().__init__()
         self.docs = docs
         self._corpus_type = corpus_type
         self._tf_dict = utils.termFrequencyInDoc(self.docs)  # returns term frequency
@@ -188,11 +191,10 @@ class BooleanExtended(object):
                     weight[i][word] = 0
         return weight
 
-    def ranking(self, r_query, top):
+    def ranking(self, r_query):
         """ 
         Method to rank the documents based on the query
-        
-        :param top:
+
         :param self: instance of the model
         :type self: Extended
         
@@ -214,8 +216,37 @@ class BooleanExtended(object):
         rank = expr.eval(self)
 
         scores = np.array(rank)
-        scores = scores.argsort()[-top:][::-1]
-        return [self.docs[i] for i in scores]
+        scores = scores.argsort()[:][::-1]
+        return [self.docs[i] for i in scores if rank[i] > 0]
+
+    def dnf_method(self, query, qcount=2):
+        """
+        Method to evaluate the query using the DNF method
+
+        :param qcount: adjusts the occurrence characteristics of the query terms
+        :param self: instance of the model
+        :type self: Extended
+
+        :param query: query
+        :type query: str
+
+        :rtype: list
+        :return: list of ranked documents
+        """
+
+        # tokenize the query
+        query = query.split()
+
+        # parse the query
+        expr = BooleanExpression('or')
+        expr.parse(query)
+
+        # R = self.querys[query].cr
+        # for c in expr.children:
+        #     if c.type == 'and':
+        #
+        # TODO: implement the DNF method
+
 
     def __str__(self):
         return "extended_boolean" + "_" + self._corpus_type
