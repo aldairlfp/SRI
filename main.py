@@ -7,7 +7,7 @@ def main():
     # Create a welcome message
     print("Welcome to the SRI")
     print("=================================")
-    path = 'corpus/cran/cran.all.1400'
+    path = 'D:/SRI/Dataset/cran.all.1400'
     print('Loading data...')
     try:
         vec = utils.deserialize('models/boolean_extended.pkl')
@@ -18,10 +18,8 @@ def main():
 
     while True:
         query = input("Enter your query: ")
-        if query == 'q':
-            break
         print()
-        ranking = vec.ranking(query, 5)
+        ranking = prob.get_ranking(query, 5)
         for i, doc in enumerate(ranking):
             print("Rank: ", i + 1)
             print("Doc ID: ", doc.id)
