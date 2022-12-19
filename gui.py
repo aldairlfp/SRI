@@ -9,6 +9,7 @@ models = {'Vector Space': models.VectorSpace, 'Extended Boolean': models.Boolean
 models_s = {'Vector Space': 'vector_space', 'Extended Boolean': 'boolean_extended', 'Probabilistic': 'probabilistic'}
 corpus = {'cran': data_collections.CranCollection, 'newsgroup': data_collections.NewsGroupCollection}
 
+
 class Ui_MainWindow(object):
     def __init__(self):
         self.model = utils.deserialize('models/boolean_extended.pkl')
@@ -34,7 +35,7 @@ class Ui_MainWindow(object):
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.sys_name = QtWidgets.QLabel(self.centralwidget)
-        self.sys_name.setGeometry(QtCore.QRect(440, 10, 171, 41))
+        self.sys_name.setGeometry(QtCore.QRect(400, 10, 300, 41))
         font = QtGui.QFont()
         font.setFamily("Ubuntu")
         font.setPointSize(20)
@@ -150,25 +151,8 @@ class Ui_MainWindow(object):
         if self.search_input.currentText() != '':
             self.t = time()
             self.query = self.search_input.currentText()
-            # repeat = 0
-            # for q in self.SRI.get_querys():
-            #     if q.get_text() == self.search_input.currentText():
-            #         self.query = q
-            #         repeat = 1
-            #         break
-            # if not repeat:
-            #     self.query = self.SRI.create_query(self.search_input.currentText())
-            #     self.SRI.insert_query(self.query)
-            #     self.search_input.addItem(self.query._text)
-            #
-            # self.SRI.compare_query(self.query)
-            # self.rank = (self.SRI.ranking(self.query)
-            #              if len(self.query.get_relevants()) == 0
-            #              else self.SRI.retro(self.query))
-            self.rank = self.model.ranking(self.search_input.currentText(), 20)
+            self.rank = self.model.ranking(self.search_input.currentText())
             self.rank_page = [[] for i in range(int(len(self.rank) / 20) + 1)]
-            # Con esta línea revisamos los ids de los documentos devueltos
-            # print([i[0]._d_id for i in self.rank])
             element = 0
             page = 0
             for d in self.rank:
@@ -210,9 +194,12 @@ class Ui_MainWindow(object):
             self.verticalLayout.setObjectName("verticalLayout")
         index = 0
         for d in r:
-            # self.query.set_not_relevant(d[0])
             g = self.group(self.scrollAreaWidgetContents, self.verticalLayout,
-                           d, index, self.query)
+                           d, index, self.model.querys[self.query])
+            if d.is_relevant:
+                self.model.set_relevance(self.query, d)
+            else:
+                self.model.set_non_relevance(self.query, d)
             self.groups.append(g)
             index += 1
         self.scrollArea.show()
@@ -220,8 +207,9 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "SRI"))
-        self.sys_name.setText(_translate("MainWindow", "SRI Searcher"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "Find All"))
+        MainWindow.setWindowIcon(QtGui.QIcon('icon.ico'))
+        self.sys_name.setText(_translate("MainWindow", "Find All - Search Engine"))
         self.search_button.setText(_translate("MainWindow", "Search"))
         self.page_back.setText(_translate("MainWindow", "<"))
         self.page_next.setText(_translate("MainWindow", ">"))
@@ -242,7 +230,6 @@ class Ui_MainWindow(object):
             self.doc = doc
             self.subject = doc.title
             self.index = index
-            self.query = query
 
             self.group = QtWidgets.QGroupBox(self.area)
             self.group.setGeometry(QtCore.QRect(10, 10 + 101 * index, 741, 150))
@@ -256,12 +243,13 @@ class Ui_MainWindow(object):
             self.check.setObjectName("relevant_" + str(index))
             self.check.setGeometry(QtCore.QRect(640, 30, 92, 23))
 
-            # if doc in query.get_relevants():
-            #     self.check.setChecked(True)
-            self.check.setChecked(True)
+            if doc in query.cr:
+                self.check.setChecked(True)
+            else:
+                self.check.setChecked(False)
 
             self.my_layout.addWidget(self.check)
-            # self.check.stateChanged.connect(lambda: self.relevant(self.check))
+            self.check.stateChanged.connect(lambda: self.relevant(self.check))
             self.check.show()
 
             self.text = QtWidgets.QTextEdit(self.group)
@@ -278,14 +266,7 @@ class Ui_MainWindow(object):
             self.text.show()
 
         def relevant(self, c):
-            if c.isChecked():
-                self.query.set_relevant(self.doc)
-                if self.doc in self.query.get_not_relevants():
-                    self.query.get_not_relevants().remove(self.doc)
-            else:
-                self.query.set_not_relevant(self.doc)
-                if self.doc in self.query.get_relevants():
-                    self.query.get_relevants().remove(self.doc)
+            self.doc.set_relevance(c.isChecked())
 
 
 def main():
@@ -298,3 +279,5 @@ def main():
     ui.model_combo.addItems(['Vector Space', 'Extended Boolean', 'Probabilistic'])
     MainWindow.show()
     sys.exit(app.exec_())
+
+# TODO: When change the page the relevance is not saved
