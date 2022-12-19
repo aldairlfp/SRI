@@ -3,6 +3,7 @@ from nltk import word_tokenize
 import string
 # stemming
 from nltk.stem import PorterStemmer
+import os
 
 from documents import Document
 
@@ -21,48 +22,44 @@ def default_processor(raw_text, language):
 
 class Collection:
 
-    def __init__(self, processor, lang: str = 'english'):
-        self.processor = processor
-        self.lang = lang
-
-    def get_pretty_name(self) -> str:
-        """Returns the pretty name of this parser
-
-        Returns:
-            str: The name of the parser
+    def __init__(self, corpus: str, processor=default_processor, lang: str = 'english'):
         """
-        return self.__class__.__name__
-
-    def get_extension_list(self) -> list[str]:
-        """Returns the list of the formats this parser handles
-        Returns:
-            list[str]: A list with all the formats. Each element has the form 'ext' not '.ext',
+        Collection initializer
+        :param processor: Text processor to use in the collection
+        :param lang: Language of the collection
         """
-        return ['.txt']
+        self._corpus = corpus
+        self._processor = processor
+        self._lang = lang
+        docs = []
+        self.explore_dir('corpus/' + corpus, '', docs)
+        self._pre_docs = docs
+        os.chdir('../..')
 
-    def parse(self, file):
-        """This method receives a file and parse its contents returning a list of documents
+    def explore_dir(self, r, p, docs):
+        os.chdir(r)
+        elements = os.listdir()
+        for path in elements:
+            n_p = p + '/' + path
+            if os.path.isdir(path):
+                self.explore_dir(path, n_p, docs)
+                os.chdir('..')
+            else:
+                if not path.endswith('.txt'):
+                    docs.append('corpus/' + self._corpus + n_p)
+        return docs
 
-        Args:
-            file (_type_): _description_
-        Returns:
-            list[Document]: A list with the normalized documents
-        """
-        return [Document(0, 'empty', 'empty', self.processor, self.lang)]
+    def parse(self):
+        raise NotImplemented()
 
 
 class CranCollection(Collection):
 
     def __init__(self, processor=default_processor, lang='english'):
-        super().__init__(processor, lang)
+        super().__init__('cran')
 
-    def get_extension_list(self):
-        return ['all.1400']
-
-    def get_pretty_name(self) -> str:
-        return 'Cran'
-
-    def parse(self, file):
+    def parse(self):
+        file = open(self._pre_docs[0], 'r')
         docs = []
         doc_id = 0
         text = ''
@@ -81,12 +78,13 @@ class CranCollection(Collection):
                     text += line
                 elif line.split()[0] == '.I':
                     if in_text:
-                        doc = Document(doc_id, subject, text, self.processor, self.lang)
+                        doc = Document(doc_id, subject, text, self._processor, self._lang)
                         docs.append(doc)
+                        doc_id += 1
                         in_text = 0
                         subject = ''
                         text = ''
-                    doc_id = int(line.split()[1])
+                    # doc_id = int(line.split()[1])
                 elif line.split()[0] == '.T':
                     in_subject = 1
                 elif line.split()[0] == '.W':
@@ -96,8 +94,38 @@ class CranCollection(Collection):
                 elif in_subject:
                     subject += line
             elif not line:
-                doc = Document(doc_id, subject, text, self.processor, self.lang)
+                doc = Document(doc_id, subject, text, self._processor, self._lang)
                 docs.append(doc)
+                doc_id += 1
                 break
+        file.close()
+        return docs
 
+
+class NewsGroupCollection(Collection):
+    def __init__(self, processor=default_processor, lang='english'):
+        super().__init__('newsgroup')
+
+    def _get_document(self, file):
+        text = ''
+        subject = ''
+        s = 1
+        while True:
+            line = file.readline()
+            if not line:
+                break
+            text += line
+            if s and line.split()[0] == 'Subject:':
+                s = 0
+                subject = ' '.join(line.split()[1:])
+        return [subject, text]
+
+    def parse(self):
+        docs = []
+        for path in self._pre_docs:
+            file = open(path, 'r')
+            subject, text = self._get_document(file)
+            doc = Document(path, subject, text, self._processor, self._lang)
+            docs.append(doc)
+            file.close()
         return docs

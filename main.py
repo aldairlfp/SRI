@@ -1,16 +1,20 @@
 from models import *
 from data_collections import *
+import gui
 
-if __name__ == "__main__":
+
+def main():
     # Create a welcome message
     print("Welcome to the SRI")
     print("=================================")
     path = 'D:/SRI/Dataset/cran.all.1400'
     print('Loading data...')
-    with open(path, 'r', errors='ignore') as f:
-        docs = CranCollection().parse(f)
-    # vec = VectorSpace(docs)
-    prob = Probabilistic(docs)
+    try:
+        vec = utils.deserialize('models/boolean_extended.pkl')
+    except FileNotFoundError:
+        docs = CranCollection().parse()
+        vec = BooleanExtended(docs)
+        utils.serialize(vec, 'models/boolean_extended.pkl')
 
     while True:
         query = input("Enter your query: ")
@@ -22,8 +26,7 @@ if __name__ == "__main__":
             print("Title: ", doc.title)
             print("Corpus: ", doc.corpus)
             print()
-        
-        print("Did you finish? (y/n)\n")
-        ini = input()
-        if ini == 'y':
-            break
+
+
+if __name__ == "__main__":
+    gui.main()

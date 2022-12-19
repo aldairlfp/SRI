@@ -9,3 +9,7 @@ class Document:
         self.lang = lang
         self.norm_title = processor(title, lang)
         self.norm_corpus = processor(corpus, lang)
+        self.is_relevant = False
+
+    def set_relevance(self, relevance):
+        self.is_relevant = relevance
