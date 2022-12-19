@@ -279,3 +279,5 @@ def main():
     ui.model_combo.addItems(['Vector Space', 'Extended Boolean', 'Probabilistic'])
     MainWindow.show()
     sys.exit(app.exec_())
+
+# TODO: When change the page the relevance is not saved
