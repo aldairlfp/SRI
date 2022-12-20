@@ -32,10 +32,19 @@ class Collection:
         self._corpus = corpus
         self._processor = processor
         self._lang = lang
+        self.docs = []
         docs = []
         utils.explore_dir(self._corpus, 'corpus/' + corpus, '', docs)
         self._pre_docs = docs
         os.chdir('../..')
+
+    def save(self):
+        utils.serialize(self.docs, 'data/' + self._corpus + '_docs.pkl')
+        return self.docs
+
+    def load(self):
+        self.docs = utils.deserialize('data/' + self._corpus + '_docs.pkl')
+        return self.docs
 
 
 class CranCollection(Collection):
@@ -43,7 +52,6 @@ class CranCollection(Collection):
     def __init__(self, processor=default_processor, lang='english'):
         super().__init__('cran')
         file = open(self._pre_docs[0], 'r')
-        self.docs = []
         doc_id = 0
         text = ''
         subject = ''
@@ -87,7 +95,6 @@ class CranCollection(Collection):
 class NewsGroupCollection(Collection):
     def __init__(self, processor=default_processor, lang='english'):
         super().__init__('newsgroup')
-        self.docs = []
         for i, path in enumerate(self._pre_docs):
             file = open(path, 'r')
             subject, text = self._get_document(file)
@@ -109,12 +116,19 @@ class NewsGroupCollection(Collection):
                 subject = ' '.join(line.split()[1:])
         return [subject, text]
 
+    def save(self):
+        utils.serialize(self.docs, 'data/newsgroup_docs.pkl')
+        return self.docs
+
+    def load(self):
+        self.docs = utils.deserialize('data/newsgroup_docs.pkl')
+        return self.docs
+
 
 class ReutersParser(Collection):
     def init(self):
         super().__init__("reuters")
         file = None
-        docs = []
         doc_id = 0
         text = ""
         title = ""
@@ -134,7 +148,7 @@ class ReutersParser(Collection):
                     doc = Document(
                         doc_id, title, text, self._processor, self._lang
                     )
-                    docs.append(doc)
+                    self.docs.append(doc)
                     text = ""
                     title = ""
                 elif in_text:
