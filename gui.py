@@ -136,23 +136,15 @@ class Ui_MainWindow(object):
     def set_corpus(self, text):
         self.corpus = corpus[text]()
         self.query = None
+        combo = 'Vector Space'
+        self.set_model(combo if self.model_combo.currentText() == '' else self.model_combo.currentText())
         self.search_input.clear()
         self.show([])
         self.temp.show()
 
     def set_model(self, text):
         pre_model = models[text]
-        if text == 'Vector Space':
-            path = 'models/' + models_s[text] + '_' + self.corpus.get_name() + '.pkl'
-            try:
-                if self.model is not None:
-                    utils.serialize(self.model, path)
-                self.model = utils.deserialize(path)
-            except FileNotFoundError:
-                self.model = pre_model(self.corpus.docs)
-                utils.serialize(self.model, path)
-        else:
-            self.model = pre_model(self.corpus.docs)
+        self.model = pre_model(self.corpus.docs)
         self.query = None
         self.search_input.clear()
         self.show([])
@@ -205,17 +197,17 @@ class Ui_MainWindow(object):
             self.verticalLayout.setObjectName("verticalLayout")
         index = 0
         for d in r:
-            if self.s_model == 'Vector Space':
+            if self.model_combo.currentText() == 'Vector Space':
                 g = self.group(self.scrollAreaWidgetContents, self.verticalLayout,
                                d, index, self.model.querys[self.query])
                 if d.is_relevant:
                     self.model.set_relevance(self.query, d)
                 else:
                     self.model.set_non_relevance(self.query, d)
-                self.groups.append(g)
             else:
                 g = self.group(self.scrollAreaWidgetContents, self.verticalLayout,
                                d, index)
+            self.groups.append(g)
 
             index += 1
         self.scrollArea.show()
@@ -238,7 +230,8 @@ class Ui_MainWindow(object):
             self.recovered.setText(_translate('MainWindow', 'Recovered: ' + str(self.r) + ' docs'))
         for group in self.groups:
             group.group.setTitle(_translate("MainWindow", "Document: " + group.subject))
-            group.check.setText(_translate("MainWindow", "Relevant"))
+            if self.model_combo.currentText() == 'Vector Space':
+                group.check.setText(_translate("MainWindow", "Relevant"))
 
     class group:
         def __init__(self, ScrollArea, layout, doc, index, query=None):
@@ -255,20 +248,21 @@ class Ui_MainWindow(object):
             self.my_layout.setObjectName("layout" + str(index))
             self.group.show()
 
-            self.check = QtWidgets.QCheckBox(self.group)
-            self.check.setObjectName("relevant_" + str(index))
-            self.check.setGeometry(QtCore.QRect(640, 30, 92, 23))
-
             if query is not None:
-                if doc in query.cr:
-                    self.check.setChecked(True)
-                else:
-                    self.check.setChecked(False)
+                self.check = QtWidgets.QCheckBox(self.group)
+                self.check.setObjectName("relevant_" + str(index))
+                self.check.setGeometry(QtCore.QRect(640, 30, 92, 23))
 
-            self.my_layout.addWidget(self.check)
-            self.check.stateChanged.connect(lambda: self.relevant(self.check))
-            if query is not None:
-                self.check.show()
+                if query is not None:
+                    if doc in query.cr:
+                        self.check.setChecked(True)
+                    else:
+                        self.check.setChecked(False)
+
+                self.my_layout.addWidget(self.check)
+                self.check.stateChanged.connect(lambda: self.relevant(self.check))
+                if query is not None:
+                    self.check.show()
 
             self.text = QtWidgets.QTextEdit(self.group)
             self.text.setEnabled(True)
@@ -293,7 +287,7 @@ def main():
     MainWindow = QtWidgets.QMainWindow()
     ui = Ui_MainWindow()
     ui.setupUi(MainWindow)
-    ui.corpus_combo.addItems(['cran', 'newsgroup'])
+    ui.corpus_combo.addItems(['cran', 'newsgroup', 'reuters'])
     ui.model_combo.addItems(['Vector Space', 'Extended Boolean', 'Probabilistic'])
     MainWindow.show()
     sys.exit(app.exec_())
