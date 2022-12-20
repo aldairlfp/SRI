@@ -88,6 +88,7 @@ def explore_dir(corpus, r, p, docs):
             explore_dir(corpus, path, n_p, docs)
             os.chdir('..')
         else:
-            if not path.endswith('.txt'):
+            if corpus == 'cran' and path.endswith('.1400') or corpus == 'newsgroup' and path.isnumeric() \
+                    or corpus == 'reuters' and path.endswith('.sgm'):
                 docs.append('corpus/' + corpus + n_p)
     return docs
