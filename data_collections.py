@@ -40,67 +40,73 @@ class Collection:
 
     def save(self):
         utils.serialize(self.docs, 'data/' + self._corpus + '_docs.pkl')
-        return self.docs
 
     def load(self):
         self.docs = utils.deserialize('data/' + self._corpus + '_docs.pkl')
-        return self.docs
 
 
 class CranCollection(Collection):
 
     def __init__(self, processor=default_processor, lang='english'):
         super().__init__('cran')
-        file = open(self._pre_docs[0], 'r')
-        doc_id = 0
-        text = ''
-        subject = ''
-        in_subject = 0
-        in_text = 0
-        while True:
-            line = file.readline()
-            if len(line.split()) > 0:
-                if line.split()[0] == '.A':
-                    in_subject = 0
-                    line = file.readline()
-                    text += line
-                elif line.split()[0] == '.B':
-                    line = file.readline()
-                    text += line
-                elif line.split()[0] == '.I':
-                    if in_text:
-                        doc = Document(doc_id, subject, text, self._processor, self._lang)
-                        self.docs.append(doc)
-                        doc_id += 1
-                        in_text = 0
-                        subject = ''
-                        text = ''
-                    # doc_id = int(line.split()[1])
-                elif line.split()[0] == '.T':
-                    in_subject = 1
-                elif line.split()[0] == '.W':
-                    in_text = 1
-                elif in_text:
-                    text += line
-                elif in_subject:
-                    subject += line
-            elif not line:
-                doc = Document(doc_id, subject, text, self._processor, self._lang)
-                self.docs.append(doc)
-                doc_id += 1
-                break
-        file.close()
+        try:
+            self.load()
+        except FileNotFoundError:
+            file = open(self._pre_docs[0], 'r')
+            doc_id = 0
+            text = ''
+            subject = ''
+            in_subject = 0
+            in_text = 0
+            while True:
+                line = file.readline()
+                if len(line.split()) > 0:
+                    if line.split()[0] == '.A':
+                        in_subject = 0
+                        line = file.readline()
+                        text += line
+                    elif line.split()[0] == '.B':
+                        line = file.readline()
+                        text += line
+                    elif line.split()[0] == '.I':
+                        if in_text:
+                            doc = Document(doc_id, subject, text, self._processor, self._lang)
+                            self.docs.append(doc)
+                            doc_id += 1
+                            in_text = 0
+                            subject = ''
+                            text = ''
+                        # doc_id = int(line.split()[1])
+                    elif line.split()[0] == '.T':
+                        in_subject = 1
+                    elif line.split()[0] == '.W':
+                        in_text = 1
+                    elif in_text:
+                        text += line
+                    elif in_subject:
+                        subject += line
+                elif not line:
+                    doc = Document(doc_id, subject, text, self._processor, self._lang)
+                    self.docs.append(doc)
+                    doc_id += 1
+                    break
+            file.close()
+            self.save()
 
 
 class NewsGroupCollection(Collection):
-    def __init__(self, processor=default_processor, lang='english'):
+    def __init__(self):
         super().__init__('newsgroup')
-        for i, path in enumerate(self._pre_docs):
-            file = open(path, 'r')
-            subject, text = self._get_document(file)
-            doc = Document(i, subject, text, self._processor, self._lang)
-            self.docs.append(doc)
-            file.close()
+        try:
+            self.load()
+        except FileNotFoundError:
+            for i, path in enumerate(self._pre_docs):
+                file = open(path, 'r')
+                subject, text = self._get_document(file)
+                doc = Document(i, subject, text, self._processor, self._lang)
+                self.docs.append(doc)
+                file.close()
+            self.save()
 
     def _get_document(self, file):
         text = ''
@@ -128,7 +134,14 @@ class NewsGroupCollection(Collection):
 class ReutersParser(Collection):
     def init(self):
         super().__init__("reuters")
-        file = None
+        try:
+            self.load()
+        except FileNotFoundError:
+
+            self.save()
+
+    def _get_document(self, file):
+        docs = []
         doc_id = 0
         text = ""
         title = ""
@@ -148,10 +161,12 @@ class ReutersParser(Collection):
                     doc = Document(
                         doc_id, title, text, self._processor, self._lang
                     )
-                    self.docs.append(doc)
+                    docs.append(doc)
                     text = ""
                     title = ""
                 elif in_text:
                     text += line
             elif not line:
                 break
+        file.close()
+        return docs
