@@ -184,7 +184,7 @@ class Probabilistic(object):
                 p_i, r_i = self.get_relevance(document_id, common_term)
                 similarity += math.log((p_i * (1 - r_i)) / (r_i * (1 - p_i)))
 
-        return 0 if similarity == 0 else math.log(similarity)
+        return similarity
 
     def get_ranking(self, query, top, lang = 'english'):
         """Get the ranking of a query
@@ -213,7 +213,7 @@ class Probabilistic(object):
             doc_vector = self.document_vectors[index]
             sim = self.similarity(query_vector, doc_vector, index)
             
-            if sim > 0.5:
+            if sim > 1:
                 doc_rank.append((sim, index))
         self.last_ranking = sorted(
             doc_rank, key=lambda rank_index: rank_index[0], reverse=True)
