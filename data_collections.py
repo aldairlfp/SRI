@@ -129,3 +129,42 @@ class NewsGroupCollection(Collection):
             docs.append(doc)
             file.close()
         return docs
+
+
+class ReutersParser(Collection):
+    def init(self):
+        super().__init__("reuters")
+
+    def get_pretty_name(self) -> str:
+        return "Reuters"
+
+    def parse(self):
+        file = None
+        docs = []
+        doc_id = 0
+        text = ""
+        title = ""
+        in_text = 0
+        while True:
+            line = file.readline()
+            if len(line) > 0:
+                if line.find("<REUTERS") != -1:
+                    doc_id = int(line.split("NEWID=")[1].split('"')[1])
+                elif line.find("<TITLE>") != -1:
+                    title = line.split("<TITLE>")[1].split("</TITLE>")[0]
+                elif line.find("<BODY>") != -1:
+                    in_text = 1
+                    text += line.split("<BODY>")[1]
+                elif line.find("</BODY>") != -1:
+                    in_text = 0
+                    doc = Document(
+                        doc_id, title, text, self.text_processor, self.lang
+                    )
+                    docs.append(doc)
+                    text = ""
+                    title = ""
+                elif in_text:
+                    text += line
+            elif not line:
+                break
+        return docs
