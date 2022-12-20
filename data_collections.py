@@ -38,6 +38,9 @@ class Collection:
         self._pre_docs = docs
         os.chdir('../..')
 
+    def get_name(self):
+        return self._corpus
+
     def save(self):
         utils.serialize(self.docs, 'data/' + self._corpus + '_docs.pkl')
 

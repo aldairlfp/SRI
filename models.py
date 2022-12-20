@@ -66,11 +66,10 @@ class Model(object):
 
 
 class VectorSpace(Model):
-    def __init__(self, docs, corpus_type):
+    def __init__(self, docs):
         super().__init__()
         M = len(docs)  # number of files in dataset
         self.docs = docs
-        self._corpus_type = corpus_type
         self._tf_dict = utils.termFrequencyInDoc(self.docs)  # returns term frequency
         self._df_dict = utils.wordDocFre(self.docs)  # returns document frequencies
         self._idf_dict = utils.inverseDocFre(self._df_dict, M)  # returns idf scores
@@ -156,9 +155,6 @@ class VectorSpace(Model):
                     qm[word] = doc_tfidf[word]
 
         return qm
-
-    def __str__(self):
-        return "vector_space" + '_' + self._corpus_type
 
 
 class Probabilistic(object):
@@ -375,10 +371,9 @@ class Probabilistic(object):
 
 
 class BooleanExtended(Model):
-    def __init__(self, docs, corpus_type):
+    def __init__(self, docs):
         super().__init__()
         self.docs = docs
-        self._corpus_type = corpus_type
         self._tf_dict = utils.termFrequencyInDoc(self.docs)  # returns term frequency
         self._df_dict = utils.wordDocFre(self.docs)
         self._idf_dict = utils.inverseDocFre(self._df_dict, len(self.docs))  # returns idf scores
@@ -462,6 +457,3 @@ class BooleanExtended(Model):
         #     if c.type == 'and':
         #
         # TODO: implement the DNF method
-
-    def __str__(self):
-        return "extended_boolean" + "_" + self._corpus_type

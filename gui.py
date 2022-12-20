@@ -5,15 +5,17 @@ import models
 import data_collections
 import utils
 
-models = {'Vector Space': models.VectorSpace, 'Extended Boolean': models.BooleanExtended}
+models = {'Vector Space': models.VectorSpace, 'Extended Boolean': models.BooleanExtended,
+          'Probabilistic': models.Probabilistic}
 models_s = {'Vector Space': 'vector_space', 'Extended Boolean': 'boolean_extended', 'Probabilistic': 'probabilistic'}
-corpus = {'cran': data_collections.CranCollection, 'newsgroup': data_collections.NewsGroupCollection}
+corpus = {'cran': data_collections.CranCollection, 'newsgroup': data_collections.NewsGroupCollection,
+          'reuters': data_collections.ReutersCollection}
 
 
 class Ui_MainWindow(object):
     def __init__(self):
-        self.model = utils.deserialize('models/boolean_extended.pkl')
-        self.corpus = ''
+        self.model = None
+        self.corpus = None
         self.query = None
         self.recovered = None
         self.relevant = []
@@ -132,20 +134,29 @@ class Ui_MainWindow(object):
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def set_corpus(self, text):
-        self.corpus = text
+        self.corpus = corpus[text]()
         self.query = None
         self.search_input.clear()
+        self.show([])
+        self.temp.show()
 
     def set_model(self, text):
         pre_model = models[text]
-        path = 'models/' + models_s[text] + '_' + self.corpus + '.pkl'
-        try:
-            self.model = utils.deserialize(path)
-        except FileNotFoundError:
-            self.model = pre_model(corpus[self.corpus]().parse(), self.corpus)
-            utils.serialize(self.model, path)
+        if text == 'Vector Space':
+            path = 'models/' + models_s[text] + '_' + self.corpus.get_name() + '.pkl'
+            try:
+                if self.model is not None:
+                    utils.serialize(self.model, path)
+                self.model = utils.deserialize(path)
+            except FileNotFoundError:
+                self.model = pre_model(self.corpus.docs)
+                utils.serialize(self.model, path)
+        else:
+            self.model = pre_model(self.corpus.docs)
         self.query = None
         self.search_input.clear()
+        self.show([])
+        self.temp.show()
 
     def search_query(self):
         if self.search_input.currentText() != '':
@@ -194,13 +205,18 @@ class Ui_MainWindow(object):
             self.verticalLayout.setObjectName("verticalLayout")
         index = 0
         for d in r:
-            g = self.group(self.scrollAreaWidgetContents, self.verticalLayout,
-                           d, index, self.model.querys[self.query])
-            if d.is_relevant:
-                self.model.set_relevance(self.query, d)
+            if self.s_model == 'Vector Space':
+                g = self.group(self.scrollAreaWidgetContents, self.verticalLayout,
+                               d, index, self.model.querys[self.query])
+                if d.is_relevant:
+                    self.model.set_relevance(self.query, d)
+                else:
+                    self.model.set_non_relevance(self.query, d)
+                self.groups.append(g)
             else:
-                self.model.set_non_relevance(self.query, d)
-            self.groups.append(g)
+                g = self.group(self.scrollAreaWidgetContents, self.verticalLayout,
+                               d, index)
+
             index += 1
         self.scrollArea.show()
         self.retranslateUi(self.window)
@@ -225,7 +241,7 @@ class Ui_MainWindow(object):
             group.check.setText(_translate("MainWindow", "Relevant"))
 
     class group:
-        def __init__(self, ScrollArea, layout, doc, index, query):
+        def __init__(self, ScrollArea, layout, doc, index, query=None):
             self.area = ScrollArea
             self.doc = doc
             self.subject = doc.title
@@ -243,14 +259,16 @@ class Ui_MainWindow(object):
             self.check.setObjectName("relevant_" + str(index))
             self.check.setGeometry(QtCore.QRect(640, 30, 92, 23))
 
-            if doc in query.cr:
-                self.check.setChecked(True)
-            else:
-                self.check.setChecked(False)
+            if query is not None:
+                if doc in query.cr:
+                    self.check.setChecked(True)
+                else:
+                    self.check.setChecked(False)
 
             self.my_layout.addWidget(self.check)
             self.check.stateChanged.connect(lambda: self.relevant(self.check))
-            self.check.show()
+            if query is not None:
+                self.check.show()
 
             self.text = QtWidgets.QTextEdit(self.group)
             self.text.setEnabled(True)
