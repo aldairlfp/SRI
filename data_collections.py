@@ -137,7 +137,10 @@ class ReutersParser(Collection):
         try:
             self.load()
         except FileNotFoundError:
-
+            for i, path in enumerate(self._pre_docs):
+                file = open(path, 'r')
+                docs = self._get_document(file)
+                self.docs.extend(docs)
             self.save()
 
     def _get_document(self, file):
