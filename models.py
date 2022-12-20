@@ -263,7 +263,7 @@ class Probabilistic(object):
 
         return similarity
 
-    def get_ranking(self, query, top, lang='english'):
+    def ranking(self, query, top=20, lang='english'):
         """Get the ranking of a query
 
         :param self: The model
