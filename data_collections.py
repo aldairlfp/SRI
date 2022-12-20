@@ -6,6 +6,7 @@ from nltk.stem import PorterStemmer
 import os
 
 from documents import Document
+import utils
 
 
 def default_processor(raw_text, language):
@@ -32,22 +33,9 @@ class Collection:
         self._processor = processor
         self._lang = lang
         docs = []
-        self.explore_dir('corpus/' + corpus, '', docs)
+        utils.explore_dir(self._corpus, 'corpus/' + corpus, '', docs)
         self._pre_docs = docs
         os.chdir('../..')
-
-    def explore_dir(self, r, p, docs):
-        os.chdir(r)
-        elements = os.listdir()
-        for path in elements:
-            n_p = p + '/' + path
-            if os.path.isdir(path):
-                self.explore_dir(path, n_p, docs)
-                os.chdir('..')
-            else:
-                if not path.endswith('.txt'):
-                    docs.append('corpus/' + self._corpus + n_p)
-        return docs
 
     def parse(self):
         raise NotImplemented()
@@ -122,10 +110,10 @@ class NewsGroupCollection(Collection):
 
     def parse(self):
         docs = []
-        for path in self._pre_docs:
+        for i, path in enumerate(self._pre_docs):
             file = open(path, 'r')
             subject, text = self._get_document(file)
-            doc = Document(path, subject, text, self._processor, self._lang)
+            doc = Document(i, subject, text, self._processor, self._lang)
             docs.append(doc)
             file.close()
         return docs
