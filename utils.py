@@ -1,5 +1,6 @@
 import numpy as np
 import pickle
+import os
 
 
 def normalize_frequency(docs, tf_dict):
@@ -76,3 +77,17 @@ def deserialize(path):
     with open(path, "rb") as infile:
         data = pickle.load(infile)
     return data
+
+
+def explore_dir(corpus, r, p, docs):
+    os.chdir(r)
+    elements = os.listdir()
+    for path in elements:
+        n_p = p + '/' + path
+        if os.path.isdir(path):
+            explore_dir(corpus, path, n_p, docs)
+            os.chdir('..')
+        else:
+            if not path.endswith('.txt'):
+                docs.append('corpus/' + corpus + n_p)
+    return docs
