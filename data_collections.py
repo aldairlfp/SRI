@@ -131,8 +131,8 @@ class NewsGroupCollection(Collection):
         return self.docs
 
 
-class ReutersParser(Collection):
-    def init(self):
+class ReutersCollection(Collection):
+    def __init__(self):
         super().__init__("reuters")
         try:
             self.load()
