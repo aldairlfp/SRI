@@ -37,18 +37,13 @@ class Collection:
         self._pre_docs = docs
         os.chdir('../..')
 
-    def parse(self):
-        raise NotImplemented()
-
 
 class CranCollection(Collection):
 
     def __init__(self, processor=default_processor, lang='english'):
         super().__init__('cran')
-
-    def parse(self):
         file = open(self._pre_docs[0], 'r')
-        docs = []
+        self.docs = []
         doc_id = 0
         text = ''
         subject = ''
@@ -67,7 +62,7 @@ class CranCollection(Collection):
                 elif line.split()[0] == '.I':
                     if in_text:
                         doc = Document(doc_id, subject, text, self._processor, self._lang)
-                        docs.append(doc)
+                        self.docs.append(doc)
                         doc_id += 1
                         in_text = 0
                         subject = ''
@@ -83,16 +78,22 @@ class CranCollection(Collection):
                     subject += line
             elif not line:
                 doc = Document(doc_id, subject, text, self._processor, self._lang)
-                docs.append(doc)
+                self.docs.append(doc)
                 doc_id += 1
                 break
         file.close()
-        return docs
 
 
 class NewsGroupCollection(Collection):
     def __init__(self, processor=default_processor, lang='english'):
         super().__init__('newsgroup')
+        self.docs = []
+        for i, path in enumerate(self._pre_docs):
+            file = open(path, 'r')
+            subject, text = self._get_document(file)
+            doc = Document(i, subject, text, self._processor, self._lang)
+            self.docs.append(doc)
+            file.close()
 
     def _get_document(self, file):
         text = ''
@@ -108,25 +109,10 @@ class NewsGroupCollection(Collection):
                 subject = ' '.join(line.split()[1:])
         return [subject, text]
 
-    def parse(self):
-        docs = []
-        for i, path in enumerate(self._pre_docs):
-            file = open(path, 'r')
-            subject, text = self._get_document(file)
-            doc = Document(i, subject, text, self._processor, self._lang)
-            docs.append(doc)
-            file.close()
-        return docs
-
 
 class ReutersParser(Collection):
     def init(self):
         super().__init__("reuters")
-
-    def get_pretty_name(self) -> str:
-        return "Reuters"
-
-    def parse(self):
         file = None
         docs = []
         doc_id = 0
@@ -146,7 +132,7 @@ class ReutersParser(Collection):
                 elif line.find("</BODY>") != -1:
                     in_text = 0
                     doc = Document(
-                        doc_id, title, text, self.text_processor, self.lang
+                        doc_id, title, text, self._processor, self._lang
                     )
                     docs.append(doc)
                     text = ""
@@ -155,4 +141,3 @@ class ReutersParser(Collection):
                     text += line
             elif not line:
                 break
-        return docs
