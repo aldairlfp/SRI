@@ -159,18 +159,12 @@ class VectorSpace(Model):
 
 class Probabilistic(object):
     def __init__(self, docs):
-        super().__init__()
-
         self.documents = docs
-        self.document_vectors: list[list[str]] = []
-        self.last_ranking: list[tuple[float, int]] = []
-        self.query_document_relevance: dict[tuple[str, int], dict[str, float]] = {}
-        self.query_document_not_relevance: dict[tuple[str, int], dict[str, float]] = {}
-
-        self.load_feedback()
-        """
-            This contains the relevance of a query in a document
-        """
+        self.document_vectors = []
+        self.last_ranking = []
+        self.query_document_relevance = {}
+        self.query_document_not_relevance = {}
+        self.save_feedback()
 
     def generate_document_vectors(self):
         """Generate the document vectors for the model
@@ -255,7 +249,10 @@ class Probabilistic(object):
         for common_term in query:
             if common_term in document:
                 p_i, r_i = self.get_relevance(document_id, common_term)
-                similarity += math.log((p_i * (1 - r_i)) / (r_i * (1 - p_i)))
+                try:
+                    similarity += math.log((p_i * (1 - r_i)) / (r_i * (1 - p_i)))
+                except ValueError:
+                    pass
 
         return similarity
 
@@ -366,7 +363,7 @@ class Probabilistic(object):
             for line in lines[index:]:
                 line = line.split()
                 self.query_document_not_relevance[(line[0], int(line[1]))] = {line[0]: float(line[3][:-1])}
-        except FileNotFoundError:
+        except:
             pass
 
 
