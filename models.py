@@ -390,11 +390,12 @@ class BooleanExtended(Model):
         """
 
         weight = []
+        max_idf = max(self._idf_dict.values())
         for i, doc in enumerate(self.docs):
             weight.append({})
             for j, word in enumerate(doc.norm_corpus):
                 try:
-                    weight[i][word] = self._norm_frec[i][j] * self._idf_dict[word] / max(self._idf_dict.values())
+                    weight[i][word] = self._norm_frec[i][j] * self._idf_dict[word] / max_idf
                 except KeyError:
                     weight[i][word] = 0
         return weight
